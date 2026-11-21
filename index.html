@@ -3550,6 +3550,7 @@ $('#projects').addEventListener('click',function(ev){
     clearTimeout(delTimer);delArm=null;
     writeIndex(readIndex().filter(function(m){return m.id!==id}));
     try{localStorage.removeItem(PK(id))}catch(e){}
+    try{if(window.__ciakTeamForget)window.__ciakTeamForget('ciak-project-'+id)}catch(e){}
     if(curId===id){curId=null;S=null;lastSaved='';hist=[];try{localStorage.removeItem(LASTK)}catch(e){}}
     renderHome();
   }
@@ -4749,6 +4750,7 @@ $('#swProjects').addEventListener('click',function(e){
   if(a.dataset.a==='dup'){var d=ld(i);if(!d)return;d.title=(d.title||'Sceneggiatura')+' (copia)';d=nm(d);if(add(d)){toast('Duplicata');rH()}return}
   if(arm!==i){arm=i;setTimeout(function(){if(arm===i){arm=null;rH()}},3000);return rH()}
   arm=null;wr(rd().filter(function(m){return m.id!==i}));try{localStorage.removeItem('ciak-sw-p-'+i)}catch(x){}
+  try{if(window.__ciakTeamForget)window.__ciakTeamForget('ciak-sw-p-'+i)}catch(x){}
   if(window.__ciakSb)window.__ciakSb.unlink(i);
   if(id===i){id=null;S=null}rH();
 });
@@ -5558,6 +5560,9 @@ var LS=window.localStorage,_set=Storage.prototype.setItem;
 function jget(k,d){try{var v=JSON.parse(LS.getItem(k));return v==null?d:v}catch(e){return d}}
 function jset(k,v){try{_set.call(LS,k,JSON.stringify(v))}catch(e){}}
 var me=jget('ciak-team-me',{name:'',role:'regista',g:'M'});
+var prevMap=jget('ciak-team-prev',{});   /* codice -> chiave locale dell'ultima copia (resta anche dopo chiusura/uscita: serve a non duplicare i progetti se il team viene riaperto) */
+function setPrev(code,k){prevMap[code]=k;jset('ciak-team-prev',prevMap)}
+function localAlive(k){try{var id=k.replace(/^ciak-(sw-p|project)-/,''),a=jget(/^ciak-sw-p-/.test(k)?'ciak-sw-index':'ciak-index-v2',[]);return LS.getItem(k)!=null&&a.some(function(m){return m.id===id})}catch(e){return false}}
 var links=jget('ciak-team-links',{});   /* chiave localStorage del progetto -> {code,kind,h} (h = impronta dell'ultimo stato sincronizzato) */
 var cfg=BUILTIN_CFG||jget('ciak-team-config',null);
 var db=null,uid=null,fb=null,ready=null,applying=false,sel=null,revealed=false,pendingCode='';
@@ -5894,16 +5899,21 @@ function projectList(){
 function newCode(){var c='',a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',i;for(i=0;i<6;i++)c+=a[Math.floor(Math.random()*a.length)];return c}
 function shareOne(key,kind,extra,quiet){
   var v=LS.getItem(key);if(!v){toast('Progetto non trovato');return Promise.resolve()}
-  var code=newCode(),p=Core.planPush(kind,v,{});
-  return ref(code).get().then(function(s){
-    if(s.exists)return shareOne(key,kind,extra,quiet);   /* codice già in uso: ne genero un altro */
+  var old=Object.keys(prevMap).filter(function(c){return prevMap[c]===key})[0],p=Core.planPush(kind,v,{});
+  var pre=old?ref(old).get().then(function(s){return s.exists&&s.data().owner===uid&&s.data().kind===kind?old:null},function(){return null}):Promise.resolve(null);
+  return pre.then(function(reuse){var code=reuse||newCode();return ref(code).get().then(function(s){
+    if(s.exists&&!reuse)return shareOne(key,kind,extra,quiet);   /* codice già in uso: ne genero un altro */
+    /* riapertura dello stesso team: stesso codice, si tolgono i vecchi elementi e si riparte dallo stato attuale (nessun duplicato) */
+    var stale=reuse?items(code).get().then(function(q){var del=[];q.docs.forEach(function(x){if(!(x.id in p.set))del.push(function(b){b.delete(items(code).doc(x.id))})});return new Promise(function(res,rej){chunkRun(del,res,rej)})}):Promise.resolve();
+    return stale.then(function(){
     var rev=Date.now(),by=who(),rr=R[code]={meta:p.meta,order:p.order,items:{},removed:[]},ops=[],mem={};mem[uid]=meObj(null);
     Object.keys(p.set).forEach(function(id){rr.items[id]=p.set[id];ops.push(function(b){b.set(items(code).doc(id),{d:p.set[id],by:uid,byName:by,rev:rev})})});
-    ops.push(function(b){b.set(ref(code),Object.assign({fmt:2,kind:kind,title:(function(){try{return String(JSON.parse(v).title||'')}catch(e){return ''}})(),meta:p.meta,order:p.order,mby:uid,by:uid,byName:by,rev:rev,owner:uid,members:mem},extra||{}))});
+    ops.push(function(b){b.set(ref(code),Object.assign({fmt:2,kind:kind,title:(function(){try{return String(JSON.parse(v).title||'')}catch(e){return ''}})(),meta:p.meta,order:p.order,mby:uid,by:uid,byName:by,rev:rev,owner:uid,closed:false,members:mem},extra||{}))});
     return new Promise(function(res,rej){chunkRun(ops,res,rej)}).then(function(){
-      links[key]={code:code,kind:kind,h:p.base};jset('ciak-team-links',links);syncAt[code]=Date.now();listen(key);if(!quiet){sel=code;render();toast('Progetto condiviso. Codice: '+code)}return code;
+      links[key]={code:code,kind:kind,h:p.base};jset('ciak-team-links',links);setPrev(code,key);syncAt[code]=Date.now();listen(key);if(!quiet){sel=code;render();toast(reuse?'Progetto riaperto con lo stesso codice: '+code:'Progetto condiviso. Codice: '+code)}return code;
     });
-  });
+    });
+  })});
 }
 /* progetto unico: la sceneggiatura porta con sé lo storyboard collegato (stesso codice per tutti) */
 function linkedSb(swKey){
@@ -5936,9 +5946,15 @@ function joinPair(swKey,code2){
   var sid=swKey.replace(/^ciak-sw-p-/,'');
   if(Object.keys(links).some(function(x){return links[x].code===code2}))return Promise.resolve();
   return ref(code2).get().then(function(s){
-    if(!s.exists)return;var d=s.data();if(d.fmt!==2||d.kind!=='sb')return;
+    if(!s.exists)return;var d=s.data();if(d.fmt!==2||d.kind!=='sb'||d.closed)return;
     return items(code2).get().then(function(q){
       var its={};q.docs.forEach(function(x){var y=x.data();if(y&&typeof y.d==='string')its[x.id]=y.d});
+      var pk0=prevMap[code2];
+      if(pk0&&localAlive(pk0)&&!links[pk0]){   /* ho ancora la copia di prima: la riaggancio invece di crearne un'altra */
+        links[pk0]={code:code2,kind:'sb',h:Core.planPush('sb',LS.getItem(pk0),{}).base};jset('ciak-team-links',links);
+        R[code2]={meta:d.meta,order:d.order||[],items:its,removed:[]};
+        return ref(code2).set(memberPatch(pk0),{merge:true}).then(function(){listen(pk0);refreshHome();try{if(window.__ciakSw&&window.__ciakSw.resync)window.__ciakSw.resync()}catch(x){}});
+      }
       var json=Core.assemble('sb',d.meta,d.order||[],its,0);
       var id=Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,10),k='ciak-project-'+id;
       applying=true;_set.call(LS,k,json);applying=false;
@@ -5947,7 +5963,7 @@ function joinPair(swKey,code2){
       a=a.filter(function(m){if(m.link!==sid)return true;try{LS.removeItem('ciak-project-'+m.id)}catch(e){}return false});
       var e={id:id,link:sid,title:d.title||'',updated:Date.now()};try{e.n=JSON.parse(json).panels.length}catch(x){}
       a.push(e);jset('ciak-index-v2',a);
-      links[k]={code:code2,kind:'sb',h:Core.planPush('sb',json,{}).base};jset('ciak-team-links',links);
+      links[k]={code:code2,kind:'sb',h:Core.planPush('sb',json,{}).base};jset('ciak-team-links',links);setPrev(code2,k);
       R[code2]={meta:d.meta,order:d.order||[],items:its,removed:[]};
       return ref(code2).set(memberPatch(k),{merge:true}).then(function(){listen(k);refreshHome();try{if(window.__ciakSw&&window.__ciakSw.resync)window.__ciakSw.resync()}catch(x){}});
     });
@@ -5967,6 +5983,12 @@ function join(code,again){
     }
     return items(code).get().then(function(q){
       var its={};q.docs.forEach(function(x){var y=x.data();if(y&&typeof y.d==='string')its[x.id]=y.d});
+      var pk0=prevMap[code];
+      if(pk0&&localAlive(pk0)&&!links[pk0]){   /* team riaperto: ho ancora la mia copia, la riaggancio senza crearne un'altra */
+        links[pk0]={code:code,kind:d.kind,h:Core.planPush(d.kind,LS.getItem(pk0),{}).base};jset('ciak-team-links',links);
+        R[code]={meta:d.meta,order:d.order||[],items:its,removed:[]};
+        return ref(code).set(memberPatch(pk0),{merge:true}).then(function(){listen(pk0);sel=code;refreshHome();render();return joinPair(pk0,d.pair)}).then(function(){refreshHome();render();toast('Team riaperto: ho ricollegato la tua copia esistente')});
+      }
       var json=Core.assemble(d.kind,d.meta,d.order||[],its,0);
       var id=Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,10);
       k=(d.kind==='sw'?'ciak-sw-p-':'ciak-project-')+id;
@@ -5974,7 +5996,7 @@ function join(code,again){
       var a=jget(idxKey(d.kind),[]),e={id:id,title:d.title||'',updated:Date.now()};
       if(d.kind!=='sw'){try{e.n=JSON.parse(json).panels.length}catch(x){}}
       a.push(e);jset(idxKey(d.kind),a);
-      links[k]={code:code,kind:d.kind,h:Core.planPush(d.kind,json,{}).base};jset('ciak-team-links',links);
+      links[k]={code:code,kind:d.kind,h:Core.planPush(d.kind,json,{}).base};jset('ciak-team-links',links);setPrev(code,k);
       R[code]={meta:d.meta,order:d.order||[],items:its,removed:[]};
       return ref(code).set(memberPatch(k),{merge:true}).then(function(){listen(k);sel=code;refreshHome();render();return joinPair(k,d.pair)}).then(function(){refreshHome();render();toast(d.pair?'Sei entrato nel progetto: sceneggiatura e storyboard sono nell’elenco':'Sei entrato nel team: il progetto è nell’elenco')});
     });
@@ -5998,8 +6020,8 @@ function closeProject(key){
     leave(key,true);if(pk)leave(pk,true);render();toast('Progetto chiuso per tutti');
   }).catch(err);
 }
-function leave(key,sub){
-  var L=links[key];if(!L)return;
+function leave(key,sub,quiet){
+  var L=links[key];if(!L)return;setPrev(L.code,key);
   if(!sub&&!window.confirm('Smetti di sincronizzare «'+((teams[L.code]||{}).title||'questo progetto')+'»? La tua copia resta sul dispositivo, ma non riceverà più le modifiche dei colleghi.'))return;
   var code=L.code;
   if(!sub&&L.kind==='sw'){var pc=(teams[code]||{}).pair;if(pc){var pk=keyOf(pc);if(pk)leave(pk,true)}}
@@ -6010,8 +6032,10 @@ function leave(key,sub){
   jset('ciak-team-links',links);
   APPS.forEach(function(A){if(A.lock){A.lsig='';lockUI(A,null)}});
   if(sel===code)sel=null;
-  decorateSoon();render();toast('Sincronizzazione interrotta');
+  decorateSoon();render();if(!quiet)toast('Sincronizzazione interrotta');
 }
+/* progetto cancellato dalla home: tolgo il collegamento al team, altrimenti resta un legame orfano */
+window.__ciakTeamForget=function(key){try{if(links[key]){setPrev(links[key].code,key);leave(key,true,true)}}catch(e){}};
 function saveMe(){jset('ciak-team-me',me);if(uid)Object.keys(links).forEach(function(k){writePresence(k)});render()}
 function copy(txt,msg){
   var ok=function(){toast(msg)},ko=function(){window.prompt('Copia da qui:',txt)};
