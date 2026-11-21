@@ -3532,6 +3532,14 @@ function renderHome(){
   $('#projects').innerHTML=html;
   $('#homeCount').textContent='('+n+')';
 }
+function removeProject(id){
+  var m=readIndex().filter(function(x){return x.id===id})[0];
+  if(m&&m.link)lkOffSet(m.link,true);   /* cancellato di proposito: la sceneggiatura non lo ricrea più */
+  writeIndex(readIndex().filter(function(x){return x.id!==id}));
+  try{localStorage.removeItem(PK(id))}catch(e){}
+  try{if(window.__ciakTeamForget)window.__ciakTeamForget('ciak-project-'+id)}catch(e){}
+  if(curId===id){curId=null;S=null;lastSaved='';hist=[];try{localStorage.removeItem(LASTK)}catch(e){}}
+}
 $('#projects').addEventListener('click',function(ev){
   if(MOB){var mo=ev.target.closest('[data-popen]');if(mo)openProject(mo.dataset.popen);return}
   if(ev.target.closest('[data-hnew]')){newProject();return}
@@ -3548,10 +3556,7 @@ $('#projects').addEventListener('click',function(ev){
       delArm=id;clearTimeout(delTimer);delTimer=setTimeout(function(){delArm=null;if(view==='home')renderHome()},3000);renderHome();return;
     }
     clearTimeout(delTimer);delArm=null;
-    writeIndex(readIndex().filter(function(m){return m.id!==id}));
-    try{localStorage.removeItem(PK(id))}catch(e){}
-    try{if(window.__ciakTeamForget)window.__ciakTeamForget('ciak-project-'+id)}catch(e){}
-    if(curId===id){curId=null;S=null;lastSaved='';hist=[];try{localStorage.removeItem(LASTK)}catch(e){}}
+    removeProject(id);
     renderHome();
   }
 });
@@ -4109,9 +4114,13 @@ function lkMerge(d,model,old){
   d.seen=model.scenes.map(function(s){return s.id});
   d.cur=clamp(+d.cur||0,0,res.length-1);
 }
+var LKOFF='ciak-lk-off';   /* sceneggiature il cui storyboard collegato è stato cancellato dall'utente: non va ricreato da solo */
+function lkOffGet(){try{var o=JSON.parse(localStorage.getItem(LKOFF)||'{}');return o&&typeof o==='object'?o:{}}catch(e){return {}}}
+function lkOffSet(sid,on){var o=lkOffGet();if(on)o[sid]=1;else delete o[sid];try{localStorage.setItem(LKOFF,JSON.stringify(o))}catch(e){}}
 function lkSync(sid,model){
   if(MOB||!sid||!model)return;
   var sig=lkHash(LK_VER+JSON.stringify(model)),idx=readIndex(),m=idx.filter(function(x){return x.link===sid})[0];
+  if(!m&&lkOffGet()[sid])return;
   if(m&&m.sig===sig&&(function(){try{return localStorage.getItem(PK(m.id))}catch(e){return null}})())return;
   var d=null;
   if(m){
@@ -4144,7 +4153,7 @@ function lkSync(sid,model){
   writeIndex(idx);
   if(curId===id){S=d;lastSaved=after;hist=[after];try{syncHead()}catch(e){}}
 }
-function lkUnlink(sid){var idx=readIndex(),c=false;idx.forEach(function(m){if(m.link===sid){delete m.link;delete m.sig;delete m.at;c=true}});if(c)writeIndex(idx)}
+function lkUnlink(sid){lkOffSet(sid,false);var idx=readIndex(),c=false;idx.forEach(function(m){if(m.link===sid){delete m.link;delete m.sig;delete m.at;c=true}});if(c)writeIndex(idx)}
 
 window.addEventListener('storage',function(ev){
   if(!ev.key||MOB)return;
@@ -4256,7 +4265,7 @@ var tmBridge=(function(){
 })();
 window.__ciakSb={
   team:tmBridge,
-  sync:lkSync,unlink:lkUnlink,refresh:function(){if(view==='home')renderHome()},
+  sync:lkSync,unlink:lkUnlink,remove:removeProject,refresh:function(){if(view==='home')renderHome()},
   get:function(){if(!S||!curId||view==='home')return null;clearTimeout(saveTimer);save();return {title:S.title,json:JSON.stringify(S)}},
   add:function(o){var d=norm(o);if(!d)return false;var i=addProject(d);if(i){openProject(i);return true}return false}
 };
@@ -4749,11 +4758,14 @@ $('#swProjects').addEventListener('click',function(e){
   var i=a.dataset.id;
   if(a.dataset.a==='dup'){var d=ld(i);if(!d)return;d.title=(d.title||'Sceneggiatura')+' (copia)';d=nm(d);if(add(d)){toast('Duplicata');rH()}return}
   if(arm!==i){arm=i;setTimeout(function(){if(arm===i){arm=null;rH()}},3000);return rH()}
-  arm=null;wr(rd().filter(function(m){return m.id!==i}));try{localStorage.removeItem('ciak-sw-p-'+i)}catch(x){}
+  arm=null;rmSw(i);rH();
+});
+function rmSw(i){
+  wr(rd().filter(function(m){return m.id!==i}));try{localStorage.removeItem('ciak-sw-p-'+i)}catch(x){}
   try{if(window.__ciakTeamForget)window.__ciakTeamForget('ciak-sw-p-'+i)}catch(x){}
   if(window.__ciakSb)window.__ciakSb.unlink(i);
-  if(id===i){id=null;S=null}rH();
-});
+  if(id===i){id=null;S=null}
+}
 $('#swNew').addEventListener('click',nw);
 $('#swImp').addEventListener('click',function(){var b=$('#swImpBox');b.hidden=!b.hidden;if(!b.hidden)$('#swImpT').focus()});
 $('#swImpNo').addEventListener('click',function(){$('#swImpBox').hidden=true;$('#swImpT').value=''});
@@ -4862,6 +4874,7 @@ var tmBridge=(function(){
 window.__ciakSw={
   team:tmBridge,
   refresh:function(){if(!$('#viewHome').hidden)rH()},
+  remove:rmSw,
   resync:function(){if(MOB)return;if(S&&id&&!$('#viewSW').hidden){clearTimeout(timer);save()}rd().forEach(function(m){var d=ld(m.id);if(d)lkSync(m.id,nm(d))})},
   get:function(){if(!S||!id||$('#viewSW').hidden)return null;clearTimeout(timer);save();return {title:S.title,json:JSON.stringify(S)}},
   add:function(o){var i=add(nm(o));if(i){op(i);return true}return false}
@@ -5637,7 +5650,10 @@ function init(){
     /* cache sul dispositivo: si lavora anche senza rete e le modifiche partono al ritorno */
     return db.enablePersistence({synchronizeTabs:true}).then(function(){},function(){});
   }).then(function(){return fb.auth().signInAnonymously()}).then(function(c){
-    uid=c.user.uid;Object.keys(links).forEach(function(k){listen(k);push(k)});startLoops();return uid;
+    uid=c.user.uid;
+    /* legami a progetti che non esistono più in questo browser (cancellati dalla home in passato): li tolgo */
+    var dropped=false;Object.keys(links).forEach(function(k){if(!localAlive(k)){setPrev(links[k].code,k);delete links[k];dropped=true}});if(dropped)jset('ciak-team-links',links);
+    Object.keys(links).forEach(function(k){listen(k);push(k)});startLoops();return uid;
   }).catch(function(e){ready=null;throw e});
   return ready;
 }
@@ -5961,6 +5977,7 @@ function joinPair(swKey,code2){
       var a=jget('ciak-index-v2',[]);
       /* se la sceneggiatura ha già generato uno storyboard vuoto, lo sostituisco con quello del team */
       a=a.filter(function(m){if(m.link!==sid)return true;try{LS.removeItem('ciak-project-'+m.id)}catch(e){}return false});
+      try{if(window.__ciakSb&&window.__ciakSb.unlink){var o_=JSON.parse(LS.getItem('ciak-lk-off')||'{}');delete o_[sid];_set.call(LS,'ciak-lk-off',JSON.stringify(o_))}}catch(x){}
       var e={id:id,link:sid,title:d.title||'',updated:Date.now()};try{e.n=JSON.parse(json).panels.length}catch(x){}
       a.push(e);jset('ciak-index-v2',a);
       links[k]={code:code2,kind:'sb',h:Core.planPush('sb',json,{}).base};jset('ciak-team-links',links);setPrev(code2,k);
@@ -6036,6 +6053,16 @@ function leave(key,sub,quiet){
 }
 /* progetto cancellato dalla home: tolgo il collegamento al team, altrimenti resta un legame orfano */
 window.__ciakTeamForget=function(key){try{if(links[key]){setPrev(links[key].code,key);leave(key,true,true)}}catch(e){}};
+window.__ciakTeamApi={
+  isShared:function(k){return !!links[k]},
+  shareMany:function(list){
+    if(!me.name){openPanel(true);toast('Scrivi prima il tuo nome nel pannello Team');return Promise.resolve()}
+    if(!uid){openPanel(true);toast('Team non ancora connesso');return Promise.resolve()}
+    var todo=list.filter(function(x){return !links[x.key]}),n=0;
+    return todo.reduce(function(pr,x){return pr.then(function(){return share(x.key,x.kind).then(function(){n++})})},Promise.resolve()).then(function(){openPanel(true);toast(n?n+(n===1?' progetto condiviso':' progetti condivisi'):'Erano già tutti condivisi',3000)}).catch(err);
+  },
+  openTeam:function(keys){var k=keys.filter(function(x){return links[x]})[0];sel=k?links[k].code:null;openPanel(true)}
+};
 function saveMe(){jset('ciak-team-me',me);if(uid)Object.keys(links).forEach(function(k){writePresence(k)});render()}
 function copy(txt,msg){
   var ok=function(){toast(msg)},ko=function(){window.prompt('Copia da qui:',txt)};
@@ -6148,4 +6175,109 @@ if(window.__CIAK_TEST)window.__ciakTeam={links:links,R:R,teams:teams,atKey:atKey
 })();
 </script>
 <!-- ===== FINE CIAK TEAM ===== -->
+<!-- ===== SELEZIONE MULTIPLA NELLA HOME ===== -->
+<style>
+.selbtn[aria-pressed="true"]{background:var(--accent,#f5b301);color:#000}
+body.selmode .pnew{display:none!important}
+body.selmode .pcard{cursor:pointer;position:relative}
+body.selmode .pcard .pact{pointer-events:none;opacity:.35}
+body.selmode .pcard.picked{outline:3px solid var(--accent,#f5b301);outline-offset:-3px}
+.selbox{position:absolute;top:8px;left:8px;width:26px;height:26px;border-radius:7px;border:2px solid #fff;background:rgba(0,0,0,.55);color:#000;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;z-index:3;pointer-events:none}
+.pcard.picked .selbox{background:var(--accent,#f5b301)}
+#selBar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;max-width:calc(100vw - 20px);padding:8px 10px;background:var(--surface,#222);border:1px solid var(--line,#555);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+#selBar[hidden]{display:none}
+#selBar b{font-size:13px;margin-right:4px}
+</style>
+<script>
+(function(){
+var LS=window.localStorage,$=function(s){return document.querySelector(s)};
+if(window.__ciakMob)return;
+var CFG={
+  sb:{box:'#projects',hub:'#hubSb',idx:'ciak-index-v2',pk:'ciak-project-',att:'data-popen'},
+  sw:{box:'#swProjects',hub:'#hubSw',idx:'ciak-sw-index',pk:'ciak-sw-p-',att:'data-o'}
+};
+var on=false,pick={sb:{},sw:{}},bar=null;
+function jget(k){try{var a=JSON.parse(LS.getItem(k)||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
+function toast(m){var t=$('#toast');if(!t)return;t.textContent=m;t.classList.add('on');setTimeout(function(){t.classList.remove('on')},2600)}
+function curKind(){return $('#hubSw')&&!$('#hubSw').hidden?'sw':'sb'}
+function cardId(k,card){var e=card.querySelector('['+CFG[k].att+']');return e?e.getAttribute(CFG[k].att):null}
+function count(){var n=0;['sb','sw'].forEach(function(k){n+=Object.keys(pick[k]).length});return n}
+function decorate(k){
+  var box=$(CFG[k].box);if(!box)return;
+  [].forEach.call(box.querySelectorAll('.pcard'),function(c){
+    var id=cardId(k,c),old=c.querySelector('.selbox');
+    if(!on||!id){if(old)old.remove();c.classList.remove('picked');return}
+    if(!old){old=document.createElement('span');old.className='selbox';c.insertBefore(old,c.firstChild)}
+    var p=!!pick[k][id];old.textContent=p?'✓':'';c.classList.toggle('picked',p);
+  });
+}
+function decorateAll(){decorate('sb');decorate('sw');upBar()}
+function setMode(v){
+  on=v;document.body.classList.toggle('selmode',on);
+  if(!on)pick={sb:{},sw:{}};
+  [].forEach.call(document.querySelectorAll('.selbtn'),function(b){b.setAttribute('aria-pressed',on?'true':'false');b.textContent=on?'Fine selezione':'Seleziona'});
+  decorateAll();
+}
+function upBar(){
+  if(!bar)return;var n=count();bar.hidden=!on;
+  bar.querySelector('b').textContent=n+(n===1?' selezionato':' selezionati');
+  [].forEach.call(bar.querySelectorAll('[data-sa]'),function(b){if(b.dataset.sa!=='all'&&b.dataset.sa!=='off')b.disabled=!n&&b.dataset.sa!=='team'});
+}
+function items(){
+  var o=[];['sb','sw'].forEach(function(k){var ix=jget(CFG[k].idx);Object.keys(pick[k]).forEach(function(id){var m=ix.filter(function(x){return x.id===id})[0];if(m)o.push({k:k,id:id,m:m,key:CFG[k].pk+id})})});
+  return o;
+}
+function safe(t){return String(t||'').replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,'').replace(/\s+/g,' ').trim().slice(0,80)||'Senza titolo'}
+function stamp(){var d=new Date(),p=function(n){return ('0'+n).slice(-2)};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+'-'+p(d.getMinutes())}
+function dl(name,text){
+  var u=URL.createObjectURL(new Blob([text],{type:'application/json'})),a=document.createElement('a');
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(u)},8000);
+}
+function refresh(){try{if(window.__ciakSb)window.__ciakSb.refresh()}catch(e){}try{if(window.__ciakSw)window.__ciakSw.refresh()}catch(e){}}
+function act(a){
+  if(a==='off'){setMode(false);return}
+  if(a==='all'){var k=curKind(),box=$(CFG[k].box);[].forEach.call(box.querySelectorAll('.pcard'),function(c){var id=cardId(k,c);if(id)pick[k][id]=1});decorateAll();return}
+  var it=items();
+  if(a==='team'){try{window.__ciakTeamApi.openTeam(it.map(function(x){return x.key}))}catch(e){toast('Team non disponibile')}return}
+  if(!it.length)return;
+  if(a==='del'){
+    if(!window.confirm('Eliminare '+it.length+(it.length===1?' progetto':' progetti')+'? Non si può annullare.'))return;
+    it.forEach(function(x){try{(x.k==='sb'?window.__ciakSb:window.__ciakSw).remove(x.id)}catch(e){}});
+    setMode(false);refresh();toast(it.length+(it.length===1?' progetto eliminato':' progetti eliminati'));return;
+  }
+  if(a==='dl'){
+    it.forEach(function(x,i){setTimeout(function(){var v=LS.getItem(x.key);if(v)dl(safe(x.m.title)+' - '+stamp()+'.json',v)},i*500)});
+    toast('Scarico '+it.length+(it.length===1?' file':' file')+'…');return;
+  }
+  if(a==='share'){
+    var list=[],skip=0;
+    it.forEach(function(x){if(x.k==='sb'&&x.m.link){skip++;return}list.push({key:x.key,kind:x.k})});
+    if(skip)toast('Gli storyboard collegati a una sceneggiatura si condividono insieme alla sceneggiatura');
+    if(!list.length)return;
+    try{window.__ciakTeamApi.shareMany(list)}catch(e){toast('Team non disponibile')}
+  }
+}
+function build(){
+  bar=document.createElement('div');bar.id='selBar';bar.hidden=true;
+  bar.innerHTML='<b></b><button class="btn" data-sa="all">Tutti</button><button class="btn danger" data-sa="del">Elimina</button><button class="btn" data-sa="share">Condividi</button><button class="btn" data-sa="dl">Scarica</button><button class="btn" data-sa="team">Apri team</button><button class="btn" data-sa="off">Annulla</button>';
+  bar.addEventListener('click',function(e){var b=e.target.closest('[data-sa]');if(b&&!b.disabled)act(b.dataset.sa)});
+  document.body.appendChild(bar);
+  ['sb','sw'].forEach(function(k){
+    var box=$(CFG[k].box),grp=$(CFG[k].hub+' .homebar .grp');if(!box||!grp)return;
+    var b=document.createElement('button');b.type='button';b.className='btn selbtn';b.textContent='Seleziona';b.setAttribute('aria-pressed','false');
+    b.addEventListener('click',function(){setMode(!on)});grp.insertBefore(b,grp.firstChild);
+    box.addEventListener('click',function(e){
+      if(!on)return;var c=e.target.closest('.pcard');e.preventDefault();e.stopPropagation();if(!c)return;
+      var id=cardId(k,c);if(!id)return;if(pick[k][id])delete pick[k][id];else pick[k][id]=1;decorateAll();
+    },true);
+    new MutationObserver(function(){decorate(k);upBar()}).observe(box,{childList:true});
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&on)setMode(false)});
+  /* cambiando scheda (storyboard/sceneggiatura/produzione) la selezione si azzera */
+  ['#hubTSb','#hubTSw','#hubTPr'].forEach(function(s){var e=$(s);if(e)e.addEventListener('click',function(){if(on)setMode(false)})});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',build);else build();
+})();
+</script>
+
 </body></html>
