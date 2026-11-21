@@ -5633,6 +5633,8 @@ function holder(code,id){
   return best;
 }
 function lockedSet(code){
+  /* nessun blocco: tutti possono modificare sempre */
+  return {};
   var out={},ids={};
   everyone(code).forEach(function(x){if(x.uid===uid)return;var m=x.m;if(m.at&&m.at.id&&fresh(m))ids[m.at.id]=1});
   Object.keys(ids).forEach(function(id){var b=holder(code,id);if(b&&b.uid!==uid)out[id]=b.m.name||'Un collega'});
@@ -5774,17 +5776,9 @@ function uiTick(){
     open[k]=1;
     var w=null;if(active()){try{w=T.where()}catch(e){w=null}}
     setAt(k,w);
-    var info=null,b=w&&holder(L.code,w.id);
-    if(b&&b.uid!==uid)info={name:b.m.name||'Un collega',id:w.id,label:w.label};
-    var sg=info?info.id+'|'+info.name:'';
-    if(sg!==(A.lsig||'')){A.lsig=sg;lockUI(A,info)}
-    var ls=JSON.stringify(lockedSet(L.code));
-    if(ls!==lockSig[k]){
-      lockSig[k]=ls;decorateSoon();
-      if(ls!=='{}')soonApply(k);                       /* un elemento è appena diventato in uso: se l'ho toccato, torna com'era */
-    }
-    var nr=needResync[k];
-    if(nr){var cl=lockedSet(L.code);if(nr.every(function(i){return !cl[i]})){delete needResync[k];resync()}}
+    /* solo presenza (pallini): nessun blocco */
+    var ls=JSON.stringify(there(L.code,w?w.id:'-'));
+    if(ls!==lockSig[k]){lockSig[k]=ls;decorateSoon()}
   });
   /* un progetto non più aperto non occupa nulla: rilascio la posizione */
   Object.keys(links).forEach(function(k){if(!open[k]&&atKey[k])setAt(k,null)});
@@ -6030,7 +6024,7 @@ function render(){
       h('div',{'class':'row'},[title]),
       h('div',{'class':'row',style:'margin:8px 0'},[h('span',{'class':'code',text:L.code}),h('button',{'class':'tb',type:'button',text:'Copia codice',onclick:function(){copy(L.code,'Codice copiato')}}),lk?h('button',{'class':'tb',type:'button',text:'Copia link',onclick:function(){copy(lk,'Link copiato')}}):null]),
       h('div',{'class':'st'+(syncErr[L.code]?' bad':''),text:statusTxt(L.code)+(byWho[L.code]&&!syncErr[L.code]?' · ultima modifica: '+byWho[L.code]:'')}),
-      mine?h('div',{'class':'here'+(other?' warn':''),text:other?'🔒 '+other+' sta lavorando su: '+mine.label+' (sola lettura finché non esce)':'Stai lavorando su: '+mine.label}):null,
+      mine?h('div',{'class':'here',text:'Stai lavorando su: '+mine.label}):null,
       h('div',{},uids.map(function(u){return memberChip(u,mem[u])})),
       h('button',{'class':'tb',type:'button',text:'Smetti di sincronizzare',style:'margin-top:8px',onclick:function(){leave(k)}})]);
     b.appendChild(card);
