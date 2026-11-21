@@ -1331,7 +1331,15 @@ function save(){
   if(!m){m={id:curId};idx.push(m)}
   m.title=S.title||'';m.updated=Date.now();m.n=S.panels.length;writeIndex(idx);
 }
-function saveSoon(){clearTimeout(saveTimer);saveTimer=setTimeout(save,300)}
+var saveDue=0,saveLast=0;
+/* progetto condiviso: salva ogni ~120 ms anche mentre trascini (i colleghi vedono il movimento); altrimenti come prima (300 ms dopo l'ultima modifica) */
+function saveSoon(){
+  var sh=false;try{sh=!!(window.__ciakTeamApi&&curId&&window.__ciakTeamApi.isShared(PK(curId)))}catch(e){}
+  if(!sh){clearTimeout(saveTimer);saveTimer=setTimeout(save,300);return}
+  var n=Date.now();if(saveTimer&&saveDue>n-40)return;
+  var w=Math.max(0,120-(n-saveLast));saveDue=n+w;
+  saveTimer=setTimeout(function(){saveTimer=null;saveLast=Date.now();save()},w);
+}
 var hist=[];
 function commit(){
   var j=JSON.stringify(S);
@@ -4356,7 +4364,7 @@ function lkModel(d){
   return {title:d.title||'',scenes:scenes};
 }
 function lkSync(i,d){try{if(MOB||!i||!window.__ciakSb||!window.__ciakSb.sync)return;window.__ciakSb.sync(i,lkModel(d))}catch(e){console.error('Ciak: collegamento storyboard',e)}}
-function ss(){clearTimeout(timer);timer=setTimeout(save,150)}
+function ss(){clearTimeout(timer);timer=setTimeout(save,80)}
 function flush(){if(!S||!id||$('#viewSW').hidden)return;clearTimeout(timer);save()}
 window.addEventListener('pagehide',flush);
 document.addEventListener('visibilitychange',function(){if(document.hidden)flush()});
@@ -5506,13 +5514,13 @@ td.sn .tm-dots{margin-left:6px}
 #acPanel .pdp{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--surface);display:flex;flex-direction:column;gap:7px}
 #acPanel .pdp .kv{font-size:12px;color:var(--muted)}
 #acPanel .pdh{margin:6px 0 0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+#acPanel select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;margin-bottom:6px;box-sizing:border-box}
 #acPanel .pdk{display:flex;align-items:center;gap:8px;font-size:13px;padding:2px 0;cursor:pointer}
 #acPanel .pdj{border:1px solid var(--line);border-radius:6px;padding:7px;background:var(--bg);display:flex;flex-direction:column;gap:5px}
 #acPanel button.tb.sm{padding:3px 9px;font-size:12px}
 #acPanel button.tb.dg{color:var(--danger)}
 @media print{#tmFab,#tmPanel,#tmLock,.tm-dots,#acBtn,#acPanel{display:none!important}}
 </style>
-<button id="tmFab" type="button" hidden aria-expanded="false">&#128101; Team<b id="tmN" hidden>0</b></button>
 <aside id="tmPanel" aria-label="Team"><header><span>Team</span><button class="tb" id="tmX" type="button">Chiudi</button></header><div id="tmBody"></div></aside>
 <div id="tmLock" role="status" hidden></div>
 <button id="acBtn" type="button" hidden aria-expanded="false" aria-controls="acPanel" title="Account"><img id="acImg" alt=""><span id="acTxt">Account</span></button>
@@ -5688,7 +5696,7 @@ function place(){
 function splashOn(){var s=document.getElementById('splash');return !!(s&&document.body.contains(s)&&!s.hidden&&getComputedStyle(s).display!=='none')}
 function reveal(){
   if(revealed)return;revealed=true;
-  $('#tmFab').hidden=false;$('#acBtn').hidden=false;place();acBtnUpdate();
+  $('#acBtn').hidden=false;place();acBtnUpdate();
   if(cfg)init().then(render).catch(function(){});else render();
   if(pendingCode){sel=null;$('#tmPanel').classList.add('on');render()}else if(pendingProd){openAccount(true)}
 }
@@ -5872,7 +5880,13 @@ function markResync(k,ids){
 
 /* ---------- sincronizzazione progetto <-> cloud (un documento per inquadratura / scena) ---------- */
 Storage.prototype.setItem=function(k){_set.apply(this,arguments);if(this===LS&&!applying&&links[k]&&uid)sched(k);if(this===LS&&!applying&&acct&&acct.on&&/^ciak-(project|sw-p)-/.test(k))aSched(k)};
-function sched(k){clearTimeout(timers[k]);timers[k]=setTimeout(function(){push(k)},1200)}
+var PUSH_GAP=200,pushDue={},pushLast={};
+/* il primo cambiamento parte subito; durante una raffica si invia al massimo ogni PUSH_GAP ms con lo stato più recente */
+function sched(k){
+  var n=Date.now();if(timers[k]&&pushDue[k]>n-40)return;
+  var w=Math.max(0,PUSH_GAP-(n-(pushLast[k]||0)));pushDue[k]=n+w;
+  timers[k]=setTimeout(function(){timers[k]=0;pushLast[k]=Date.now();push(k)},w);
+}
 function chunkRun(ops,done,fail){
   var i=0;(function next(){
     if(i>=ops.length){done();return}
@@ -5920,9 +5934,9 @@ function push(k){
   });
 }
 /* arrivi dal cloud: entrano subito nel progetto aperto (nessun ricaricamento); si aspetta solo la fine di un trascinamento o di una composizione di testo */
-function soonApply(k){clearTimeout(applyT[k]);applyT[k]=setTimeout(function(){tryApply(k)},120)}
+function soonApply(k){clearTimeout(applyT[k]);applyT[k]=setTimeout(function(){tryApply(k)},20)}
 function tryApply(k){
-  if(busy()){clearTimeout(applyT[k]);applyT[k]=setTimeout(function(){tryApply(k)},250);return}
+  if(busy()){clearTimeout(applyT[k]);applyT[k]=setTimeout(function(){tryApply(k)},100);return}
   var L=links[k];applyNow(k,L?lockedSet(L.code):{});
 }
 function applyNow(k,force){
@@ -6122,13 +6136,21 @@ function leave(key,sub,quiet){
 window.__ciakTeamForget=function(key){try{aTomb(key)}catch(e){}try{if(links[key]){setPrev(links[key].code,key);leave(key,true,true)}}catch(e){}};
 window.__ciakTeamApi={
   isShared:function(k){return !!links[k]},
+  /* «Condividi» dalla selezione nella home: manda i progetti alla produzione (se ce n'è una sola subito, altrimenti si sceglie nel pannello) */
   shareMany:function(list){
-    if(!me.name){openPanel(true);toast('Scrivi prima il tuo nome nel pannello Team');return Promise.resolve()}
-    if(!uid){openPanel(true);toast('Team non ancora connesso');return Promise.resolve()}
-    var todo=list.filter(function(x){return !links[x.key]}),n=0;
-    return todo.reduce(function(pr,x){return pr.then(function(){return share(x.key,x.kind).then(function(){n++})})},Promise.resolve()).then(function(){openPanel(true);toast(n?n+(n===1?' progetto condiviso':' progetti condivisi'):'Erano già tutti condivisi',3000)}).catch(err);
+    if(!acct.on||!uid){openAccount(true);toast('Accedi o crea un profilo per condividere con una produzione');return Promise.resolve()}
+    var cs=Object.keys(prods).filter(function(c){return prods[c]&&!prods[c].gone&&!prods[c].closed});
+    if(!cs.length){openAccount(true);toast('Crea prima una produzione');return Promise.resolve()}
+    if(cs.length===1){
+      var c=cs[0],P=prods[c].projects||{},todo=list.filter(function(x){return !(links[x.key]&&P[links[x.key].code])});
+      pdD.open[c]=true;openAccount(true);
+      if(!todo.length){toast('Erano già tutti nella produzione');return Promise.resolve()}
+      pdShare(c,todo);return Promise.resolve();
+    }
+    cs.forEach(function(c){pdD.open[c]=true;list.forEach(function(x){pdD.pick[c+'|'+x.key]=1})});
+    openAccount(true);toast('Scegli la produzione e premi «Condividi»');return Promise.resolve();
   },
-  openTeam:function(keys){var k=keys.filter(function(x){return links[x]})[0];sel=k?links[k].code:null;openPanel(true)}
+  openTeam:function(){openAccount(true)}
 };
 
 /* ---------- ACCOUNT personale: nome utente + password (nessuna email), progetti sempre con te ---------- */
@@ -6391,6 +6413,11 @@ function pdCard(c){
 function pdView(b){
   var codes=Object.keys(prods).filter(function(c){return prods[c]}).sort(function(a,z){return String(prods[a].name||a).localeCompare(String(prods[z].name||z))});
   var card=h('div',{'class':'card pd'},[h('h4',{text:'Produzione'}),h('p',{'class':'msg',text:'Crea un gruppo con altre persone e scegli quali progetti condividere: tutti i membri possono aprire e modificare sceneggiatura, storyboard e produzione.'})]);
+  var pn=h('input',{id:'pdMeName',type:'text',placeholder:'Il tuo nome',maxlength:'40',autocomplete:'off',value:me.name||''}),
+      pr=h('select',{id:'pdRole','aria-label':'Il tuo ruolo'},ROLES.map(function(r){var o=h('option',{value:r[0],text:roleLabel(r[0],me.g)});if(r[0]===me.role)o.selected=true;return o})),
+      pg=h('select',{id:'pdG','aria-label':'Forma del ruolo'},[['M','Al maschile (es. Sceneggiatore)'],['F','Al femminile (es. Sceneggiatrice)']].map(function(r){var o=h('option',{value:r[0],text:r[1]});if(r[0]===me.g)o.selected=true;return o}));
+  pn.onchange=function(){me.name=pn.value.trim();saveMe()};pr.onchange=function(){me.role=pr.value;saveMe()};pg.onchange=function(){me.g=pg.value;saveMe()};
+  card.appendChild(h('div',{},[h('h5',{'class':'pdh',text:'Il tuo ruolo nella produzione'}),pn,pr,pg]));
   codes.forEach(function(c){card.appendChild(pdCard(c))});
   var nm=h('input',{id:'pdName',type:'text',placeholder:'Nome della produzione',maxlength:'60',autocomplete:'off',value:pdD.name}),cd=h('input',{id:'pdCode',type:'text',placeholder:'Codice produzione (es. K7M2QX)',maxlength:'8',autocapitalize:'characters',autocomplete:'off',value:pdD.code||pendingProd});
   var mk=function(){pdCreate(nm.value).catch(pdE)},go=function(){pdJoin(cd.value).catch(pdE)};
@@ -6774,10 +6801,9 @@ function restore(b,keep,top){
 function start(){render();init().then(render).catch(function(e){render();var m=$('#tmErr');if(m)m.textContent=niceErr(e)+(/auth/i.test(e.message)?' — abilita l’accesso «Anonimo» in Authentication e aggiungi il dominio del sito tra i domini autorizzati.':'')})}
 function openPanel(on){
   if(on){var ap=$('#acPanel');if(ap&&ap.classList.contains('on')){ap.classList.remove('on');$('#acBtn').setAttribute('aria-expanded','false')}}
-  var p=$('#tmPanel');p.classList.toggle('on',on);$('#tmFab').setAttribute('aria-expanded',on?'true':'false');
+  var p=$('#tmPanel');p.classList.toggle('on',on);
   render();
 }
-$('#tmFab').onclick=function(){openPanel(!$('#tmPanel').classList.contains('on'))};
 $('#tmX').onclick=function(){openPanel(false)};
 $('#acBtn').onclick=function(){openAccount(!$('#acPanel').classList.contains('on'))};
 $('#acX').onclick=function(){openAccount(false)};
@@ -6860,7 +6886,7 @@ function act(a){
   if(a==='off'){setMode(false);return}
   if(a==='all'){var k=curKind(),box=$(CFG[k].box);[].forEach.call(box.querySelectorAll('.pcard'),function(c){var id=cardId(k,c);if(id)pick[k][id]=1});decorateAll();return}
   var it=items();
-  if(a==='team'){try{window.__ciakTeamApi.openTeam(it.map(function(x){return x.key}))}catch(e){toast('Team non disponibile')}return}
+  if(a==='team'){try{window.__ciakTeamApi.openTeam(it.map(function(x){return x.key}))}catch(e){toast('Produzione non disponibile')}return}
   if(!it.length)return;
   if(a==='del'){
     if(!window.confirm('Eliminare '+it.length+(it.length===1?' progetto':' progetti')+'? Non si può annullare.'))return;
@@ -6876,12 +6902,12 @@ function act(a){
     it.forEach(function(x){if(x.k==='sb'&&x.m.link){skip++;return}list.push({key:x.key,kind:x.k})});
     if(skip)toast('Gli storyboard collegati a una sceneggiatura si condividono insieme alla sceneggiatura');
     if(!list.length)return;
-    try{window.__ciakTeamApi.shareMany(list)}catch(e){toast('Team non disponibile')}
+    try{window.__ciakTeamApi.shareMany(list)}catch(e){toast('Produzione non disponibile')}
   }
 }
 function build(){
   bar=document.createElement('div');bar.id='selBar';bar.hidden=true;
-  bar.innerHTML='<b></b><button class="btn" data-sa="all">Tutti</button><button class="btn danger" data-sa="del">Elimina</button><button class="btn" data-sa="share">Condividi</button><button class="btn" data-sa="dl">Scarica</button><button class="btn" data-sa="team">Apri team</button><button class="btn" data-sa="off">Annulla</button>';
+  bar.innerHTML='<b></b><button class="btn" data-sa="all">Tutti</button><button class="btn danger" data-sa="del">Elimina</button><button class="btn" data-sa="share">Condividi</button><button class="btn" data-sa="dl">Scarica</button><button class="btn" data-sa="team">Produzione</button><button class="btn" data-sa="off">Annulla</button>';
   bar.addEventListener('click',function(e){var b=e.target.closest('[data-sa]');if(b&&!b.disabled)act(b.dataset.sa)});
   document.body.appendChild(bar);
   ['sb','sw'].forEach(function(k){
