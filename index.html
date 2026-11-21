@@ -5475,7 +5475,11 @@ td.sn .tm-dots{margin-left:6px}
 #acPanel .pw .eye{position:absolute;right:2px;top:2px;width:34px;height:30px;border:0;background:transparent;color:var(--muted);border-radius:6px;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
 #acPanel .pw .eye:hover{color:var(--ink)}
 #acPanel .pw .eye svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-#acPanel .avs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+#acPanel .avs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+#acPanel .phrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+#acPanel .crop{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:10px}
+#acPanel .crop canvas{width:200px;height:200px;border-radius:50%;border:2px solid var(--line);touch-action:none;cursor:grab;background:#fff}
+#acPanel .crop input[type=range]{width:100%;margin:0}
 #acPanel .av.blank{border-style:dashed;display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;color:var(--muted)}
 #acPanel .aved{display:flex;flex-direction:column;gap:12px;margin-top:10px}
 #acPanel .aved h5{margin:0 0 5px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
@@ -6197,10 +6201,10 @@ function aPushProfile(){
   aCol().doc(PROF).set({av:me.av,dev:DEV,updated:Date.now()},{merge:true}).catch(function(){});
 }
 function aProfSeen(d,isFirst){
-  if(!d||typeof d.av!=='string'||!d.av||!avParse(d.av))return;
+  if(!d||typeof d.av!=='string'||!d.av||(!avPhotoOf(d.av)&&!avParse(d.av)))return;
   if(!isFirst&&d.dev===DEV)return;   /* l'ho scritto io: non torno indietro se nel frattempo ho cambiato ancora */
   if(d.av===me.av)return;
-  me.av=d.av;acd.edit=false;jset('ciak-team-me',me);render();   /* all'accesso vince l'avatar dell'account */
+  me.av=d.av;acd.edit=false;acd.crop=null;var pp=avPhotoOf(d.av);if(pp)jset('ciak-acct-photo',pp);jset('ciak-team-me',me);render();   /* all'accesso vince l'avatar dell'account */
   if(uid)Object.keys(links).forEach(function(k){writePresence(k)});
 }
 function aOn(u){
@@ -6233,32 +6237,34 @@ function aSignOut(){
   render();
 }
 /* ---------- avatar dell'account: 4 immagini (2 maschili, 2 femminili) ---------- */
-var AV_HS=['none','short','curly','long','bob','bun','pony'],AV_TS=['tee','vneck','collar','hoodie','tank'],AV_GL=['none','round','square','sun'],AV_HT=['none','cap','beanie','fedora'],AV_NK=['none','chain','pearls','pendant'];
-var AV_L={hs:['Calvo','Corti','Ricci','Lunghi','Caschetto','Chignon','Coda'],ts:['T-shirt','Scollo a V','Camicia','Felpa','Canotta'],gl:['Nessuno','Tondi','Quadrati','Da sole'],ht:['Nessuno','Cappellino','Cuffia','Fedora'],nk:['Nessuna','Catenina','Perle','Ciondolo']};
+var AV_HS=['none','short','curly','long','bob','bun','pony'],AV_TS=['tee','vneck','collar','hoodie','tank'],AV_GL=['none','round','square','sun'],AV_HT=['none','cap','beanie','fedora'],AV_NK=['none','chain','pearls','pendant'],AV_BR=['none','full','goatee','mustache','stubble'];
+var AV_L={hs:['Calvo','Corti','Ricci','Lunghi','Caschetto','Chignon','Coda'],ts:['T-shirt','Scollo a V','Camicia','Felpa','Canotta'],gl:['Nessuno','Tondi','Quadrati','Da sole'],ht:['Nessuno','Cappellino','Cuffia','Fedora'],nk:['Nessuna','Catenina','Perle','Ciondolo'],br:['Nessuna','Completa','Pizzetto','Baffi','Accennata']};
 var AV_SKIN=['f6d2b8','f1c9a5','e0ac82','c68a62','8d5a3c','5a3825'],AV_HAIR=['1c1410','4a2f1f','6b3a1e','c9a14a','d9d9d9','b3382c','4650c8','e0568f'],AV_COL=['3b6fd8','2f9e6b','e0568f','7b5bd6','e8952c','b3382c','1b2127','f7f8f7'],AV_BG=['cfe3ff','ffe2b8','ffd6e7','d9f0d3','e6dcff','eeeeee'];
-function avDef(o){var c={skin:'f1c9a5',hs:1,hc:'4a2f1f',ts:0,tc:'3b6fd8',gl:0,ht:0,hk:'e8952c',nk:0,er:0,br:0,bg:'cfe3ff'},k;for(k in (o||{}))c[k]=o[k];return c}
+function avDef(o){var c={skin:'f1c9a5',hs:1,hc:'4a2f1f',ts:0,tc:'3b6fd8',gl:0,ht:0,hk:'e8952c',nk:0,er:0,br:0,bc:'4a2f1f',bg:'cfe3ff'},k;for(k in (o||{}))c[k]=o[k];return c}
 var AVS=[
  {id:'m1',label:'Avatar maschile 1',cfg:avDef({})},
- {id:'m2',label:'Avatar maschile 2',cfg:avDef({skin:'8d5a3c',hc:'1c1410',tc:'2f9e6b',br:1,bg:'ffe2b8'})},
+ {id:'m2',label:'Avatar maschile 2',cfg:avDef({skin:'8d5a3c',hc:'1c1410',tc:'2f9e6b',br:1,bc:'1c1410',bg:'ffe2b8'})},
  {id:'f1',label:'Avatar femminile 1',cfg:avDef({skin:'f6d2b8',hs:3,hc:'6b3a1e',tc:'e0568f',bg:'ffd6e7'})},
  {id:'f2',label:'Avatar femminile 2',cfg:avDef({skin:'c68a62',hs:5,hc:'1c1410',tc:'7b5bd6',er:1,bg:'d9f0d3'})}
 ];
 /* l'avatar è una stringa: id di un modello (m1…f2) oppure «c.» + campi del personalizzato; viene letto con una lista di valori ammessi (arriva anche dai colleghi) */
-function avEnc(c){return 'c.'+[c.skin,c.hs,c.hc,c.ts,c.tc,c.gl,c.ht,c.hk,c.nk,c.er?1:0,c.br?1:0,c.bg].join('.')}
+function avEnc(c){return 'c.'+[c.skin,c.hs,c.hc,c.ts,c.tc,c.gl,c.ht,c.hk,c.nk,c.er?1:0,c.br|0,c.bg,c.bc].join('.')}
 function avParse(id){
   var i,p,c,hx=/^[0-9a-f]{6}$/,ix=function(v,n){var k=/^\d{1,2}$/.test(v)?+v:-1;return k>=0&&k<n?k:-1};
   if(typeof id!=='string')return null;
   for(i=0;i<AVS.length;i++)if(AVS[i].id===id)return avDef(AVS[i].cfg);
   if(id.slice(0,2)!=='c.')return null;
-  p=id.slice(2).split('.');if(p.length!==12)return null;
-  c={skin:p[0],hs:ix(p[1],AV_HS.length),hc:p[2],ts:ix(p[3],AV_TS.length),tc:p[4],gl:ix(p[5],AV_GL.length),ht:ix(p[6],AV_HT.length),hk:p[7],nk:ix(p[8],AV_NK.length),er:ix(p[9],2),br:ix(p[10],2),bg:p[11]};
-  if(!hx.test(c.skin)||!hx.test(c.hc)||!hx.test(c.tc)||!hx.test(c.hk)||!hx.test(c.bg))return null;
+  p=id.slice(2).split('.');if(p.length!==12&&p.length!==13)return null;   /* 12 campi = formato precedente (barba nel colore dei capelli) */
+  c={skin:p[0],hs:ix(p[1],AV_HS.length),hc:p[2],ts:ix(p[3],AV_TS.length),tc:p[4],gl:ix(p[5],AV_GL.length),ht:ix(p[6],AV_HT.length),hk:p[7],nk:ix(p[8],AV_NK.length),er:ix(p[9],2),br:ix(p[10],AV_BR.length),bg:p[11],bc:p.length===13?p[12]:p[2]};
+  if(!hx.test(c.skin)||!hx.test(c.hc)||!hx.test(c.tc)||!hx.test(c.hk)||!hx.test(c.bg)||!hx.test(c.bc))return null;
   if(c.hs<0||c.ts<0||c.gl<0||c.ht<0||c.nk<0||c.er<0||c.br<0)return null;
   return c;
 }
-function avRand(){
+function avRandFix(c){c.bc=c.hc;return c}
+function avRand(){return avRandFix(avRand0())}
+function avRand0(){
   var r=function(a){return a[Math.floor(Math.random()*a.length)]},n=function(k){return Math.floor(Math.random()*k)};
-  return avDef({skin:r(AV_SKIN),hs:n(AV_HS.length),hc:r(AV_HAIR),ts:n(AV_TS.length),tc:r(AV_COL),gl:Math.random()<.35?1+n(3):0,ht:Math.random()<.25?1+n(3):0,hk:r(AV_COL),nk:Math.random()<.3?1+n(3):0,er:Math.random()<.2?1:0,br:Math.random()<.2?1:0,bg:r(AV_BG)});
+  return avDef({skin:r(AV_SKIN),hs:n(AV_HS.length),hc:r(AV_HAIR),ts:n(AV_TS.length),tc:r(AV_COL),gl:Math.random()<.35?1+n(3):0,ht:Math.random()<.25?1+n(3):0,hk:r(AV_COL),nk:Math.random()<.3?1+n(3):0,er:Math.random()<.2?1:0,br:Math.random()<.3?1+n(4):0,bc:'',bg:r(AV_BG)});
 }
 function avSvg(c){
   var sk='#'+c.skin,hr='#'+c.hc,tc='#'+c.tc,hk='#'+c.hk,hs=AV_HS[c.hs],ts=AV_TS[c.ts],gl=AV_GL[c.gl],ht=AV_HT[c.ht],nk=AV_NK[c.nk];
@@ -6289,7 +6295,11 @@ function avSvg(c){
   if(ts==='hoodie'){hood='<path d="M19 48c0-10 5-14 13-14s13 4 13 14z" fill="'+tc+'"/><path d="M19 48c0-10 5-14 13-14s13 4 13 14z"'+SHADE+'/>';cloth='<path d="'+BODY+'" fill="'+tc+'"/>'+neck+'<path d="M25 45c1.500 5 12.500 5 14 0z" fill="'+sk+'"/><path d="M28.500 49.500v8M35.500 49.500v8" stroke="#fff" stroke-opacity=".85" stroke-width="1.300" stroke-linecap="round"/>'}
   if(ts==='tank')cloth='<path d="M15 64c1-9 4-15 9-18l2-1.500c2 5 10 5 12 0l2 1.500c5 3 8 9 9 18z" fill="'+tc+'"/>'+neck;
   /* barba, orecchini */
-  if(c.br)beard='<path d="M20 30c1 9 5.500 13 12 13s11-4 12-13c-1.500 3-3.500 5-5 5.500-2.200-1.500-4.400-2-7-2s-4.800.5-7 2c-1.500-.5-3.500-2.500-5-5.500z" fill="'+hr+'"/>';
+  var bcol='#'+c.bc,fullB='M20 30c1 9 5.500 13 12 13s11-4 12-13c-1.500 3-3.500 5-5 5.500-2.200-1.500-4.400-2-7-2s-4.800.5-7 2c-1.500-.5-3.500-2.500-5-5.500z';
+  if(c.br===1)beard='<path d="'+fullB+'" fill="'+bcol+'"/>';
+  if(c.br===2)beard='<path d="M27 37.500c1 2 2.500 3 5 3s4-1 5-3c1 4-1 6.500-5 6.500s-6-2.500-5-6.500z" fill="'+bcol+'"/>';
+  if(c.br===3)beard='<path d="M25.500 33.500c2-2.500 4.500-2.500 6.500-.8 2-1.700 4.500-1.700 6.500.8-1.200 3-3.500 3.200-6.500 1.700-3 1.500-5.300 1.300-6.500-1.700z" fill="'+bcol+'"/>';
+  if(c.br===4){defs+='<defs><clipPath id="sbc"><circle cx="32" cy="27" r="13"/></clipPath></defs>';beard='<path clip-path="url(#sbc)" d="'+fullB+'" fill="'+bcol+'" fill-opacity=".38"/>'}   /* barba accennata: resta dentro il viso */
   if(c.er)ear='<circle cx="19" cy="33" r="1.600" fill="#f0b429"/><circle cx="45" cy="33" r="1.600" fill="#f0b429"/>';
   /* cappelli */
   if(ht==='cap')hat='<path d="M19 22c0-9 5-13 13-13s13 4 13 13z" fill="'+hk+'"/><ellipse cx="34" cy="22.500" rx="18" ry="2.800" fill="'+hk+'"/><ellipse cx="34" cy="22.500" rx="18" ry="2.800"'+SHADE+'/><circle cx="32" cy="9.500" r="1.300"'+SHADE+'/>';
@@ -6304,16 +6314,19 @@ function avSvg(c){
   if(nk==='chain')col='<path d="M25 45c1.500 7 12.500 7 14 0" fill="none" stroke="#f0b429" stroke-width="1.300" stroke-linecap="round"/>';
   if(nk==='pendant')col='<path d="M25 45c1.500 7 12.500 7 14 0" fill="none" stroke="#f0b429" stroke-width="1.300" stroke-linecap="round"/><circle cx="32" cy="51.500" r="2.400" fill="#d6336c" stroke="#f0b429" stroke-width="1"/>';
   if(nk==='pearls')col='<g fill="#fff" stroke="#b9b9c4" stroke-width=".5"><circle cx="25.500" cy="46" r="1.400"/><circle cx="27" cy="48.500" r="1.400"/><circle cx="29.500" cy="50.200" r="1.400"/><circle cx="32" cy="50.800" r="1.400"/><circle cx="34.500" cy="50.200" r="1.400"/><circle cx="37" cy="48.500" r="1.400"/><circle cx="38.500" cy="46" r="1.400"/></g>';
-  var mouth=c.br?'<path d="M29 36.500q3 2 6 0" stroke="#f3d9c8" fill="none" stroke-width="1.500" stroke-linecap="round"/>':'<path d="M28 34q4 3 8 0" stroke="#7a3b2e" fill="none" stroke-width="1.600" stroke-linecap="round"/>';
+  var mouth=c.br===1?'<path d="M29 36.500q3 2 6 0" stroke="#f3d9c8" fill="none" stroke-width="1.500" stroke-linecap="round"/>':'<path d="M28 34q4 3 8 0" stroke="#7a3b2e" fill="none" stroke-width="1.600" stroke-linecap="round"/>';
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'+defs+'<rect width="64" height="64" fill="#'+c.bg+'"/>'+back+hood+'<path d="'+BODY+'" fill="'+sk+'"/>'+cloth+
     '<circle cx="32" cy="27" r="13" fill="'+sk+'"/>'+ear+'<circle cx="27" cy="28" r="1.600" fill="#222"/><circle cx="37" cy="28" r="1.600" fill="#222"/>'+front+beard+mouth+hat+glass+col+'</svg>';
 }
 var AV_NEUTRAL='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#c6cdd0"/><circle cx="32" cy="26" r="11" fill="#f7f8f7"/><path d="M10 64c0-14 10-21 22-21s22 7 22 21z" fill="#f7f8f7"/></svg>';
 function svgUri(x){return 'data:image/svg+xml;utf8,'+encodeURIComponent(x)}
-function avUrl(id){var c=avParse(id);return c?svgUri(avSvg(c)):''}
-var acd={u:'',p:'',show:false,edit:false};   /* bozza del modulo: sopravvive ai ridisegni del pannello */
+/* foto profilo: «p:» + JPEG in base64 (solo caratteri base64, quindi sicuro anche se arriva da un collega) */
+function avPhotoOf(id){return (typeof id==='string'&&/^p:[A-Za-z0-9+\/=]{40,14000}$/.test(id))?id.slice(2):''}
+function avUrl(id){var p=avPhotoOf(id);if(p)return 'data:image/jpeg;base64,'+p;var c=avParse(id);return c?svgUri(avSvg(c)):''}
+var acd={u:'',p:'',show:false,edit:false,crop:null};   /* bozza del modulo: sopravvive ai ridisegni del pannello */
 var avT=null;
 function avCommit(){
+  var pp=avPhotoOf(me.av);if(pp)jset('ciak-acct-photo',pp);   /* l'ultima foto resta disponibile anche se scegli un altro avatar */
   jset('ciak-team-me',me);render();
   clearTimeout(avT);avT=setTimeout(function(){if(uid)Object.keys(links).forEach(function(k){writePresence(k)});aPushProfile()},900);   /* un solo invio ai colleghi dopo le ultime modifiche */
 }
@@ -6346,7 +6359,7 @@ function downloadCreds(u,p){
 var EYE_ON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 var EYE_OFF='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>';
 function avEditor(c){
-  function set(k,v){c[k]=v;me.av=avEnc(c);avCommit()}
+  function set(k,v){if(k==='br'&&!c.br&&v)c.bc=c.hc;c[k]=v;me.av=avEnc(c);avCommit()}
   function sw(key,pal,label){return h('div',{'class':'sws',role:'group','aria-label':label},pal.map(function(x){return h('button',{'class':'sw',type:'button',title:label,'aria-label':label+' #'+x,'aria-pressed':c[key]===x?'true':'false',style:'background:#'+x,onclick:function(){set(key,x)}})}))}
   function ch(key,names,label){return h('div',{'class':'chs',role:'group','aria-label':label},names.map(function(n,i){return h('button',{'class':'chip',type:'button',text:n,'aria-pressed':c[key]===i?'true':'false',onclick:function(){set(key,i)}})}))}
   function tg(key,name){return h('button',{'class':'chip',type:'button',text:name,'aria-pressed':c[key]?'true':'false',onclick:function(){set(key,c[key]?0:1)}})}
@@ -6359,31 +6372,84 @@ function avEditor(c){
         h('button',{'class':'tb p',type:'button',text:'Fatto',onclick:function(){acd.edit=false;render()}})])]),
     sec('Capelli',[ch('hs',AV_L.hs,'Stile dei capelli')]),
     sec('Colore capelli',[sw('hc',AV_HAIR,'Colore dei capelli')]),
+    sec('Barba',[ch('br',AV_L.br,'Barba')].concat(c.br?[sw('bc',AV_HAIR,'Colore della barba')]:[])),
     sec('Colore pelle',[sw('skin',AV_SKIN,'Colore della pelle')]),
     sec('Maglia',[ch('ts',AV_L.ts,'Stile della maglia')]),
     sec('Colore maglia',[sw('tc',AV_COL,'Colore della maglia')]),
     sec('Occhiali',[ch('gl',AV_L.gl,'Occhiali')]),
     sec('Cappello',[ch('ht',AV_L.ht,'Cappello')].concat(c.ht?[sw('hk',AV_COL,'Colore del cappello')]:[])),
     sec('Collana',[ch('nk',AV_L.nk,'Collana')]),
-    sec('Altro',[h('div',{'class':'chs'},[tg('br','Barba'),tg('er','Orecchini')])]),
+    sec('Altro',[h('div',{'class':'chs'},[tg('er','Orecchini')])]),
     sec('Sfondo',[sw('bg',AV_BG,'Colore dello sfondo')])
   ];
   return h('div',{'class':'card aved'},kids);
 }
+var PHX=80;   /* lato (px) della foto salvata: piccola, così viaggia nel cloud e nel team */
+function phDraw(cv,st,size){
+  var im=st.img,w=im.naturalWidth||im.width,hh=im.naturalHeight||im.height,sd=Math.min(w,hh)/st.z;
+  st.cx=Math.max(sd/2,Math.min(w-sd/2,st.cx));st.cy=Math.max(sd/2,Math.min(hh-sd/2,st.cy));
+  cv.width=cv.height=size;var x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,size,size);
+  x.drawImage(im,st.cx-sd/2,st.cy-sd/2,sd,sd,0,0,size,size);
+}
+function phSave(st){
+  var cv=document.createElement('canvas'),q=.78,d,b;
+  phDraw(cv,st,PHX);
+  do{d=cv.toDataURL('image/jpeg',q);b=d.slice(d.indexOf(',')+1);q-=.1}while(b.length>9000&&q>.3);
+  return b;
+}
+function phEnd(){if(acd.crop&&acd.crop.url){try{URL.revokeObjectURL(acd.crop.url)}catch(e){}}acd.crop=null}
+function phPick(f){
+  if(!f)return;
+  if(!/^image\//.test(f.type)){toast('Scegli un file immagine');return}
+  var url=URL.createObjectURL(f),im=new Image();
+  im.onload=function(){phEnd();acd.crop={img:im,url:url,z:1,cx:im.naturalWidth/2,cy:im.naturalHeight/2};acd.edit=false;render()};
+  im.onerror=function(){try{URL.revokeObjectURL(url)}catch(e){}toast('Immagine non leggibile: prova con un JPG o un PNG')};
+  im.src=url;
+}
+function phCropView(){
+  var st=acd.crop,cv=h('canvas',{'aria-label':'Trascina per spostare la foto'}),z=h('input',{type:'range',min:'1',max:'3',step:'.01',value:String(st.z),'aria-label':'Ingrandimento'}),drag=null;
+  phDraw(cv,st,400);
+  cv.onpointerdown=function(e){drag={x:e.clientX,y:e.clientY};try{cv.setPointerCapture(e.pointerId)}catch(x){}};
+  cv.onpointermove=function(e){
+    if(!drag)return;
+    var r=cv.getBoundingClientRect(),sd=Math.min(st.img.naturalWidth,st.img.naturalHeight)/st.z,k=sd/r.width;
+    st.cx-=(e.clientX-drag.x)*k;st.cy-=(e.clientY-drag.y)*k;drag={x:e.clientX,y:e.clientY};phDraw(cv,st,400);
+  };
+  cv.onpointerup=cv.onpointercancel=function(){drag=null};
+  z.oninput=function(){st.z=+z.value;phDraw(cv,st,400)};
+  return h('div',{'class':'crop'},[
+    h('div',{'class':'msg',text:'Trascina la foto per centrare il viso e usa il cursore per ingrandire.'}),cv,z,
+    h('div',{'class':'row'},[
+      h('button',{'class':'tb p',type:'button',text:'Usa questa foto',onclick:function(){var b=phSave(st);jset('ciak-acct-photo',b);me.av='p:'+b;phEnd();acd.edit=false;avCommit();toast('Foto profilo aggiornata')}}),
+      h('button',{'class':'tb',type:'button',text:'Annulla',onclick:function(){phEnd();render()}})])]);
+}
 function avPicker(){
-  var cu=avCustom();
+  var cu=avCustom(),cur=avPhotoOf(me.av),saved=cur||jget('ciak-acct-photo','');
+  if(!/^[A-Za-z0-9+\/=]{40,14000}$/.test(String(saved)))saved='';
   var tiles=AVS.map(function(a){
     var im=h('img',{src:svgUri(avSvg(a.cfg)),alt:a.label});
-    return h('button',{'class':'av',type:'button',title:a.label,'aria-label':a.label,'aria-pressed':me.av===a.id?'true':'false',onclick:function(){setAvatar(a.id)}},[im]);
+    return h('button',{'class':'av',type:'button',title:a.label,'aria-label':a.label,'aria-pressed':me.av===a.id?'true':'false',onclick:function(){phEnd();setAvatar(a.id)}},[im]);
   });
   tiles.push(h('button',{'class':'av'+(cu?'':' blank'),type:'button',title:'Personalizza il tuo avatar','aria-label':'Personalizza il tuo avatar','aria-pressed':cu?'true':'false','aria-expanded':acd.edit?'true':'false',onclick:function(){
+    phEnd();
     if(acd.edit&&cu){acd.edit=false;render();return}
     if(!cu)me.av=avEnc(avParse(me.av)||avDef({}));
     acd.edit=true;avCommit();
   }},[cu?h('img',{src:svgUri(avSvg(cu)),alt:''}):h('span',{text:'+'})]));
-  var kids=[h('h4',{text:'Il tuo avatar'}),h('div',{'class':'avs',role:'group','aria-label':'Scegli il tuo avatar'},tiles)];
-  if(acd.edit&&cu)kids.push(avEditor(cu));
-  else if(!cu)kids.push(h('div',{'class':'msg',style:'margin-top:6px',text:'Tocca «+» per crearne uno tuo: capelli, pelle, maglia e accessori.'}));
+  if(saved)tiles.push(h('button',{'class':'av',type:'button',title:'La tua foto','aria-label':'Usa la tua foto','aria-pressed':cur?'true':'false',onclick:function(){phEnd();me.av='p:'+saved;acd.edit=false;avCommit()}},[h('img',{src:'data:image/jpeg;base64,'+saved,alt:''})]));
+  var inp=h('input',{type:'file',accept:'image/*',style:'display:none','aria-hidden':'true',tabindex:'-1'});
+  inp.onchange=function(){var f=inp.files&&inp.files[0];inp.value='';phPick(f)};
+  var btns=[h('button',{'class':'tb',type:'button',text:saved?'Cambia foto':'Carica una foto',onclick:function(){inp.click()}})];
+  if(saved)btns.push(h('button',{'class':'tb',type:'button',text:'Rimuovi foto',onclick:function(){
+    if(!window.confirm('Rimuovere la foto profilo?'))return;
+    try{LS.removeItem('ciak-acct-photo')}catch(e){}
+    if(cur){me.av='m1'}
+    phEnd();avCommit();
+  }}));
+  var kids=[h('h4',{text:'Il tuo avatar'}),h('div',{'class':'avs',role:'group','aria-label':'Scegli il tuo avatar'},tiles),h('div',{'class':'phrow'},btns.concat([inp]))];
+  if(acd.crop)kids.push(phCropView());
+  else if(acd.edit&&cu)kids.push(avEditor(cu));
+  else if(!cu&&!cur)kids.push(h('div',{'class':'msg',style:'margin-top:6px',text:'Tocca «+» per crearne uno tuo (capelli, pelle, maglia e accessori) oppure carica una foto.'}));
   return h('div',{},kids);
 }
 function acctView(b){
