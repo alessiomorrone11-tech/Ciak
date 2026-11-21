@@ -5447,11 +5447,49 @@ td.sn .tm-dots{margin-left:6px}
 .blk.tm-lk textarea,.bcard.tm-lk textarea{opacity:.72;cursor:not-allowed}
 .tm-ro{opacity:.6}
 #tmLock{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:9000;max-width:min(92vw,560px);padding:8px 14px;border-radius:999px;background:var(--ink,#1b2127);color:var(--bg,#fff);font:600 13px system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.3);pointer-events:none}
-@media print{#tmFab,#tmPanel,#tmLock,.tm-dots{display:none!important}}
+
+/* ===== ACCOUNT: pulsante nell'angolo in alto a sinistra + pannello dedicato ===== */
+#acBtn{position:fixed;left:12px;top:10px;z-index:50;display:inline-flex;align-items:center;gap:8px;height:38px;max-width:min(60vw,170px);padding:0 14px 0 4px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:19px;font:600 13px var(--font-body,system-ui,sans-serif);cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+#acBtn img{width:30px;height:30px;border-radius:50%;flex:none;display:block;background:var(--surface2)}
+#acBtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mob #acBtn{padding:0 4px;max-width:none}.mob #acBtn span{display:none}
+@media (max-width:1724px){.top,.swtop{padding-left:var(--ac-w,0px)}}
+.mob .top,.mob .swtop{padding-left:0;padding-top:56px}
+@media (max-width:1724px){.mob .top,.mob .swtop{padding-left:0}}
+#acPanel{position:fixed;top:0;left:0;bottom:0;width:min(380px,100vw);z-index:9001;background:var(--surface);color:var(--ink);border-right:1px solid var(--line);box-shadow:8px 0 30px rgba(0,0,0,.3);display:none;flex-direction:column;font:14px/1.45 system-ui,sans-serif}
+#acPanel.on{display:flex}
+#acPanel header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:16px}
+#acBody{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+#acPanel h4{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+#acPanel input[type=text],#acPanel input[type=password]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;margin-bottom:6px;box-sizing:border-box}
+#acPanel button.tb{border:1px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:6px;padding:6px 12px;font:inherit;cursor:pointer}
+#acPanel button.tb.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+#acPanel button.tb:disabled{opacity:.5;cursor:not-allowed}
+#acPanel .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+#acPanel .card{border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--bg)}
+#acPanel .msg{color:var(--muted);font-size:13px}
+#acPanel .st{font-size:12px;color:var(--muted);margin:4px 0}
+#acPanel .st.bad{color:#e5484d}
+#acPanel .pw{position:relative}
+#acPanel .pw input{padding-right:40px}
+#acPanel .pw .eye{position:absolute;right:2px;top:2px;width:34px;height:30px;border:0;background:transparent;color:var(--muted);border-radius:6px;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+#acPanel .pw .eye:hover{color:var(--ink)}
+#acPanel .pw .eye svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#acPanel .avs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+#acPanel .av{padding:3px;border:2px solid var(--line);border-radius:50%;background:transparent;cursor:pointer;aspect-ratio:1;display:block}
+#acPanel .av img{width:100%;height:100%;border-radius:50%;display:block}
+#acPanel .av[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+#acPanel .big{display:flex;align-items:center;gap:12px}
+#acPanel .big img{width:56px;height:56px;border-radius:50%;flex:none}
+#acPanel .warn{font-size:12px;color:var(--muted);margin:2px 0 8px}
+#tmPanel .mem i.av{background-size:cover;background-position:center}
+@media print{#tmFab,#tmPanel,#tmLock,.tm-dots,#acBtn,#acPanel{display:none!important}}
 </style>
 <button id="tmFab" type="button" hidden aria-expanded="false">&#128101; Team<b id="tmN" hidden>0</b></button>
 <aside id="tmPanel" aria-label="Team"><header><span>Team</span><button class="tb" id="tmX" type="button">Chiudi</button></header><div id="tmBody"></div></aside>
 <div id="tmLock" role="status" hidden></div>
+<button id="acBtn" type="button" hidden aria-expanded="false" aria-controls="acPanel" title="Account"><img id="acImg" alt=""><span id="acTxt">Account</span></button>
+<aside id="acPanel" aria-label="Account"><header><span>Account</span><button class="tb" id="acX" type="button">Chiudi</button></header><div id="acBody"></div></aside>
 <script id="tm-js">
 /* ---------- motore di fusione (puro, senza rete): divide un progetto in elementi e li riunisce ---------- */
 var Core=(function(){
@@ -5623,7 +5661,7 @@ function place(){
 function splashOn(){var s=document.getElementById('splash');return !!(s&&document.body.contains(s)&&!s.hidden&&getComputedStyle(s).display!=='none')}
 function reveal(){
   if(revealed)return;revealed=true;
-  $('#tmFab').hidden=false;place();
+  $('#tmFab').hidden=false;$('#acBtn').hidden=false;place();acBtnUpdate();
   if(cfg)init().then(render).catch(function(){});else render();
   if(pendingCode){sel=null;$('#tmPanel').classList.add('on');render()}
 }
@@ -5634,7 +5672,7 @@ function watchSplash(){
   mo.observe(s,{attributes:true,attributeFilter:['hidden','class','style']});
   mo.observe(document.body,{childList:true});
 }
-window.addEventListener('resize',place);window.addEventListener('orientationchange',place);
+window.addEventListener('resize',function(){place();acBtnUpdate()});window.addEventListener('resize',place);window.addEventListener('orientationchange',place);
 try{var tb=document.getElementById('thBtn');if(tb&&window.ResizeObserver)new ResizeObserver(place).observe(tb)}catch(e){}
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(place);
 
@@ -5662,7 +5700,7 @@ function init(){
 function ref(code){return db.collection('teams').doc(code)}
 function items(code){return ref(code).collection('items')}
 function who(){return (me.name||'Senza nome')+' ('+roleLabel(me.role,me.g)+')'}
-function meObj(at){var o={name:me.name||'Senza nome',role:me.role,g:me.g,ts:Date.now()};o.at=at?{id:at.id,label:at.label,since:at.since||Date.now()}:null;return o}
+function meObj(at){var o={name:me.name||'Senza nome',role:me.role,g:me.g,av:me.av||'',ts:Date.now()};o.at=at?{id:at.id,label:at.label,since:at.since||Date.now()}:null;return o}
 function memberPatch(k){var u={members:{}};u.members[uid]=meObj(atKey[k]);return u}
 function bytes(s){try{return s.length>200000?Math.round(s.length*1.05):new Blob([s]).size}catch(e){return s.length}}
 function labelOf(kind,id,s){if(id==='ed')return 'Produzione · Edizione';try{var v=JSON.parse(s);if(kind==='sw')return String((v[0]&&v[0].x)||'Scena').slice(0,40);return String(v.title||'Inquadratura').slice(0,40)}catch(e){return id}}
@@ -6170,27 +6208,119 @@ function aSignOut(){
   fb.auth().signOut().then(function(){return fb.auth().signInAnonymously()}).then(function(c){uid=c.user.uid;render()}).catch(function(){render()});
   render();
 }
+/* ---------- avatar dell'account: 4 immagini (2 maschili, 2 femminili) ---------- */
+var AVS=[
+ {id:'m1',label:'Avatar maschile 1',bg:'#cfe3ff',skin:'#f1c9a5',hair:'#4a2f1f',shirt:'#3b6fd8',kind:'short'},
+ {id:'m2',label:'Avatar maschile 2',bg:'#ffe2b8',skin:'#8d5a3c',hair:'#1c1410',shirt:'#2f9e6b',kind:'beard'},
+ {id:'f1',label:'Avatar femminile 1',bg:'#ffd6e7',skin:'#f6d2b8',hair:'#6b3a1e',shirt:'#e0568f',kind:'long'},
+ {id:'f2',label:'Avatar femminile 2',bg:'#d9f0d3',skin:'#c68a62',hair:'#1c1410',shirt:'#7b5bd6',kind:'bun'}
+];
+function avSvg(a){
+  var back='',front='',mouth='<path d="M28 34q4 3 8 0" stroke="#7a3b2e" fill="none" stroke-width="1.6" stroke-linecap="round"/>';
+  if(a.kind==='short')front='<path d="M19 26c0-10 6-15 13-15s13 5 13 15c-3-5-8-8-13-8s-10 3-13 8z" fill="'+a.hair+'"/>';
+  if(a.kind==='beard'){
+    front='<path d="M18.5 25c-1-11 6-16 13.5-16s14.5 5 13.5 16c-2-4-5-7-13.5-7s-11.5 3-13.5 7z" fill="'+a.hair+'"/><path d="M20 30c1 9 5.5 13 12 13s11-4 12-13c-1.5 3-3.5 5-5 5.5-2.2-1.5-4.4-2-7-2s-4.8.5-7 2c-1.5-.5-3.5-2.5-5-5.5z" fill="'+a.hair+'"/>';
+    mouth='<path d="M29 36.5q3 2 6 0" stroke="#f3d9c8" fill="none" stroke-width="1.5" stroke-linecap="round"/>';
+  }
+  if(a.kind==='long'){
+    back='<path d="M16 30c0-12 7-20 16-20s16 8 16 20v18c0 3-4 4-6 0H22c-2 4-6 3-6 0z" fill="'+a.hair+'"/>';
+    front='<path d="M19 26c3-9 10-11 14-11 6 0 11 4 12 11-5-2-9-5-12-8-3 4-8 7-14 8z" fill="'+a.hair+'"/>';
+  }
+  if(a.kind==='bun'){
+    back='<circle cx="32" cy="9.5" r="6" fill="'+a.hair+'"/>';
+    front='<path d="M19 27c0-11 5-16 13-16s13 5 13 16c-4-3-8-6-13-6s-9 3-13 6z" fill="'+a.hair+'"/><circle cx="19" cy="33" r="1.6" fill="#f0b429"/><circle cx="45" cy="33" r="1.6" fill="#f0b429"/>';
+  }
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="'+a.bg+'"/>'+back+
+    '<path d="M10 64c0-13 10-20 22-20s22 7 22 20z" fill="'+a.shirt+'"/><rect x="27" y="36" width="10" height="10" rx="4" fill="'+a.skin+'"/><circle cx="32" cy="27" r="13" fill="'+a.skin+'"/>'+front+
+    '<circle cx="27" cy="28" r="1.6" fill="#222"/><circle cx="37" cy="28" r="1.6" fill="#222"/>'+mouth+'</svg>';
+}
+var AV_NEUTRAL='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#c6cdd0"/><circle cx="32" cy="26" r="11" fill="#f7f8f7"/><path d="M10 64c0-14 10-21 22-21s22 7 22 21z" fill="#f7f8f7"/></svg>';
+function svgUri(x){return 'data:image/svg+xml;utf8,'+encodeURIComponent(x)}
+function avUrl(id){var a=AVS.filter(function(x){return x.id===id})[0];return a?svgUri(avSvg(a)):''}
+var acd={u:'',p:'',show:false};   /* bozza del modulo: sopravvive ai ridisegni del pannello */
+function setAvatar(id){me.av=id;saveMe()}
+function acLabel(){return acct.on?acct.u:'Account'}
+function acBtnUpdate(){
+  var im=$('#acImg'),tx=$('#acTxt'),bt=$('#acBtn');if(!im||!bt)return;
+  im.src=avUrl(me.av)||svgUri(AV_NEUTRAL);tx.textContent=acLabel();bt.title=acct.on?'Account: '+acct.u:'Account (accedi o crea un profilo)';
+  var w=Math.round(bt.getBoundingClientRect().width);document.documentElement.style.setProperty('--ac-w',bt.hidden||!w?'0px':(w+12)+'px');
+}
+/* scarica un file di testo con nome utente e password, così i dati non si perdono */
+function downloadCreds(u,p){
+  u=aName(u);
+  if(!u||!p){toast('Scrivi prima nome utente e password');return false}
+  var t='CIAK - credenziali account\r\n'+
+        '===========================\r\n\r\n'+
+        'Nome utente: '+u+'\r\n'+
+        'Password: '+p+'\r\n\r\n'+
+        'Creato il: '+new Date().toLocaleString('it-IT')+'\r\n\r\n'+
+        'Conserva questo file in un posto sicuro e non condividerlo: contiene la tua password in chiaro.\r\n'+
+        'Senza email la password non si può recuperare: se la perdi, non potrai più accedere ai tuoi progetti nel cloud.\r\n';
+  try{
+    var bl=new Blob(['\ufeff'+t],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(bl),a=document.createElement('a');
+    a.href=url;a.download='ciak-account-'+u+'.txt';a.style.display='none';document.body.appendChild(a);a.click();
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url)},1500);
+    toast('File con le credenziali scaricato');return true;
+  }catch(e){toast('Download non riuscito');return false}
+}
+var EYE_ON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+var EYE_OFF='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>';
+function avPicker(){
+  var row=h('div',{'class':'avs',role:'group','aria-label':'Scegli il tuo avatar'},AVS.map(function(a){
+    var im=h('img',{src:svgUri(avSvg(a)),alt:a.label});
+    return h('button',{'class':'av',type:'button',title:a.label,'aria-label':a.label,'aria-pressed':me.av===a.id?'true':'false',onclick:function(){setAvatar(a.id)}},[im]);
+  }));
+  return h('div',{},[h('h4',{text:'Il tuo avatar'}),row]);
+}
 function acctView(b){
   var msg=h('div',{id:'tmAErr','class':'msg'});
+  if(!uid){
+    b.appendChild(avPicker());
+    b.appendChild(h('div',{'class':'msg',text:navigator.onLine===false?'Sei offline: l’account si collegherà appena torna la rete.':'Connessione in corso…'}));
+    return;
+  }
   if(acct.on){
     b.appendChild(h('div',{'class':'card'},[h('h4',{text:'Il tuo account'}),
-      h('div',{style:'font-weight:700',text:acct.u}),
-      h('div',{'class':'st'+(/non riuscita|Permesso|Regole/.test(acct.state)?' bad':''),text:acct.state||'—'}),
+      h('div',{'class':'big'},[h('img',{src:avUrl(me.av)||svgUri(AV_NEUTRAL),alt:''}),h('div',{},[h('div',{style:'font-weight:700',text:acct.u}),
+      h('div',{'class':'st'+(/non riuscita|Permesso|Regole/.test(acct.state)?' bad':''),text:acct.state||'—'})])]),
       h('div',{'class':'row',style:'margin-top:8px;gap:6px'},[
         h('button',{'class':'tb',type:'button',text:'Sincronizza ora',onclick:function(){['sb','sw'].forEach(function(kind){jget(idxKey(kind),[]).forEach(function(m){aPush(aLocalKey(kind,m.id))})})}}),
         h('button',{'class':'tb',type:'button',text:'Esci',onclick:aSignOut})])]));
+    b.appendChild(avPicker());
     return;
   }
-  var un=h('input',{id:'tmAU',placeholder:'Nome utente',maxlength:'24',autocomplete:'username',autocapitalize:'none',spellcheck:'false'});
-  var pw=h('input',{id:'tmAP',type:'password',placeholder:'Password (min. 6 caratteri)',autocomplete:'current-password'});
-  function run(f){if(acct.busy)return;msg.textContent='';acct.busy=true;f(un.value,pw.value).then(function(){acct.busy=false},function(e){acct.busy=false;msg.textContent=aErr(e)})}
-  pw.onkeydown=function(e){if(e.key==='Enter')run(aSignIn)};
+  b.appendChild(avPicker());
+  var un=h('input',{id:'tmAU',type:'text',placeholder:'Nome utente',maxlength:'24',autocomplete:'username',autocapitalize:'none',spellcheck:'false',value:acd.u});
+  var pw=h('input',{id:'tmAP',type:acd.show?'text':'password',placeholder:'Password (min. 6 caratteri)',autocomplete:'current-password',value:acd.p});
+  un.oninput=function(){acd.u=un.value};pw.oninput=function(){acd.p=pw.value};
+  var eye=h('button',{'class':'eye',type:'button','aria-label':acd.show?'Nascondi la password':'Mostra la password',title:acd.show?'Nascondi la password':'Mostra la password','aria-pressed':acd.show?'true':'false',onclick:function(){
+    acd.show=!acd.show;pw.type=acd.show?'text':'password';eye.innerHTML=acd.show?EYE_OFF:EYE_ON;
+    var t=acd.show?'Nascondi la password':'Mostra la password';eye.setAttribute('aria-label',t);eye.title=t;eye.setAttribute('aria-pressed',acd.show?'true':'false');pw.focus();
+  }});
+  eye.innerHTML=acd.show?EYE_OFF:EYE_ON;
+  function run(f,dl){if(acct.busy)return;msg.textContent='';acct.busy=true;var u=un.value,p=pw.value;f(u,p).then(function(){acct.busy=false;if(dl)downloadCreds(u,p);acd.p='';acd.show=false;render()},function(e){acct.busy=false;msg.textContent=aErr(e)})}
+  pw.onkeydown=function(e){if(e.key==='Enter')run(aSignIn,false)};
+  var dlc=h('input',{id:'tmADl',type:'checkbox'});dlc.checked=acd.dl!==false;dlc.onchange=function(){acd.dl=dlc.checked};
   b.appendChild(h('div',{'class':'card'},[h('h4',{text:'Account (facoltativo)'}),
     h('p',{'class':'msg',text:'Solo nome utente e password, nessuna email: i tuoi progetti si salvano nel cloud e li ritrovi da qualsiasi dispositivo. Attenzione: senza email la password non si può recuperare.'}),
-    un,pw,
-    h('div',{'class':'row',style:'margin-top:8px;gap:6px'},[
-      h('button',{'class':'tb p',type:'button',text:'Accedi',onclick:function(){run(aSignIn)}}),
-      h('button',{'class':'tb',type:'button',text:'Crea profilo',onclick:function(){run(aSignUp)}})]),msg]));
+    un,h('div',{'class':'pw'},[pw,eye]),
+    h('label',{style:'display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:4px 0 8px'},[dlc,h('span',{text:'Scarica un file con nome utente e password quando creo il profilo (consigliato, per non perdere i dati)'})]),
+    h('div',{'class':'row',style:'gap:6px'},[
+      h('button',{'class':'tb p',type:'button',text:'Accedi',onclick:function(){run(aSignIn,false)}}),
+      h('button',{'class':'tb',type:'button',text:'Crea profilo',onclick:function(){run(aSignUp,dlc.checked)}}),
+      h('button',{'class':'tb',type:'button',text:'Scarica credenziali',title:'Salva ora un file con nome utente e password scritti qui sopra',onclick:function(){downloadCreds(un.value,pw.value)}})]),
+    h('p',{'class':'warn',style:'margin-top:8px',text:'Il file contiene la password in chiaro: tienilo in un posto sicuro.'}),msg]));
+}
+function acRender(){
+  var b=$('#acBody');if(!b)return;
+  var ae=document.activeElement,keep=ae&&b.contains(ae)&&ae.id?{id:ae.id,s:ae.selectionStart,e:ae.selectionEnd}:null,top=b.scrollTop;
+  var err=$('#tmAErr'),et=err?err.textContent:'';
+  b.textContent='';acctView(b);
+  var e2=$('#tmAErr');if(e2&&et)e2.textContent=et;
+  restore(b,keep,top);acBtnUpdate();
+}
+function openAccount(on){
+  var p=$('#acPanel');if(on)openPanel(false);p.classList.toggle('on',on);$('#acBtn').setAttribute('aria-expanded',on?'true':'false');acRender();
 }
 function saveMe(){jset('ciak-team-me',me);if(uid)Object.keys(links).forEach(function(k){writePresence(k)});render()}
 function copy(txt,msg){
@@ -6218,7 +6348,7 @@ function setupView(b){
 }
 function memberChip(u,m){
   var on=Date.now()-(m.ts||0)<300000||u===uid;
-  var kids=[h('i',{text:initials(m.name),style:'background:'+colorOf(u)}),document.createTextNode(m.name+' · '+roleLabel(m.role,m.g)+(u===uid?' (tu)':''))];
+  var au=avUrl(m.av),kids=[au?h('i',{'class':'av',style:'background-image:url("'+au+'")'}):h('i',{text:initials(m.name),style:'background:'+colorOf(u)}),document.createTextNode(m.name+' · '+roleLabel(m.role,m.g)+(u===uid?' (tu)':''))];
   if(on&&m.at&&m.at.label&&fresh(m))kids.push(h('small',{text:'· '+m.at.label}));
   return h('span',{'class':'mem'+(on?' on':''),title:on?'Attivo ora':'Ultima attività '+new Date(m.ts||0).toLocaleString('it-IT')},kids);
 }
@@ -6229,6 +6359,7 @@ function statusTxt(code){
   return syncAt[code]?'Sincronizzato alle '+hm(syncAt[code]):'In attesa del primo aggiornamento…';
 }
 function render(){
+  try{acRender()}catch(e){console.warn('[Account]',e)}
   var b=$('#tmBody');if(!b)return;
   /* conservo cosa stai scrivendo: i colleghi aggiornano di continuo il pannello */
   var ae=document.activeElement,keep=ae&&b.contains(ae)&&ae.id?{id:ae.id,s:ae.selectionStart,e:ae.selectionEnd}:null,top=b.scrollTop;
@@ -6243,7 +6374,6 @@ function render(){
   nm.onchange=function(){me.name=nm.value.trim();saveMe()};rs.onchange=function(){me.role=rs.value;saveMe()};gs.onchange=function(){me.g=gs.value;saveMe()};
   b.appendChild(h('div',{},[h('h4',{text:'Il tuo profilo'}),nm,rs,gs]));
   if(!uid){b.appendChild(h('div',{'class':'msg',id:'tmErr',text:navigator.onLine===false?'Sei offline: il team si collegherà appena torna la rete.':'Connessione al team in corso…'}));restore(b,keep,top);return}
-  acctView(b);
   /* condividi */
   var ps=projectList().filter(function(p){return !links[p.key]}),sp=h('select',{id:'tmPick'},ps.map(function(p,i){return h('option',{value:i,text:p.label})}));
   b.appendChild(h('div',{},[h('h4',{text:'Condividi un progetto'}),ps.length?sp:h('div',{'class':'msg',text:'Nessun progetto da condividere.'}),
@@ -6284,12 +6414,15 @@ function restore(b,keep,top){
 }
 function start(){render();init().then(render).catch(function(e){render();var m=$('#tmErr');if(m)m.textContent=niceErr(e)+(/auth/i.test(e.message)?' — abilita l’accesso «Anonimo» in Authentication e aggiungi il dominio del sito tra i domini autorizzati.':'')})}
 function openPanel(on){
+  if(on){var ap=$('#acPanel');if(ap&&ap.classList.contains('on')){ap.classList.remove('on');$('#acBtn').setAttribute('aria-expanded','false')}}
   var p=$('#tmPanel');p.classList.toggle('on',on);$('#tmFab').setAttribute('aria-expanded',on?'true':'false');
   render();
 }
 $('#tmFab').onclick=function(){openPanel(!$('#tmPanel').classList.contains('on'))};
 $('#tmX').onclick=function(){openPanel(false)};
-document.addEventListener('keydown',function(e){if(e.key==='Escape'&&$('#tmPanel').classList.contains('on'))openPanel(false)});
+$('#acBtn').onclick=function(){openAccount(!$('#acPanel').classList.contains('on'))};
+$('#acX').onclick=function(){openAccount(false)};
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){if($('#tmPanel').classList.contains('on'))openPanel(false);else if($('#acPanel').classList.contains('on'))openAccount(false)}});
 window.addEventListener('online',function(){render();if(!uid&&cfg){ready=null;init().then(render).catch(function(){})}});
 window.addEventListener('offline',render);
 
