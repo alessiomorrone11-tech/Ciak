@@ -5566,7 +5566,7 @@ if(typeof module!=='undefined')module.exports=Core;
 /* Per non far incollare la configurazione a ogni collega: incolla qui la tua firebaseConfig come oggetto, es. {apiKey:"…",authDomain:"…",projectId:"…",appId:"…"} */
 var BUILTIN_CFG={apiKey:"AIzaSyCcIsItn-awOJc6SrPIDmD_XmUhZnpyZCw",authDomain:"ciak-e318b.firebaseapp.com",projectId:"ciak-e318b",storageBucket:"ciak-e318b.firebasestorage.app",messagingSenderId:"686854012147",appId:"1:686854012147:web:ce10dd2d0bc54e39970b86"};
 var ROLES=[['regista','Regista','Regista'],['coregista','Co-regista','Co-regista'],['aiuto','Aiuto regia','Aiuto regia'],['operatore','Operatore di macchina','Operatrice di macchina'],['dop','DOP','DOP'],['sceneggiatore','Sceneggiatore','Sceneggiatrice'],['produttore','Produttore','Produttrice'],['altro','Altro sul set','Altro sul set']];
-var RULES="rules_version = '2';\nservice cloud.firestore {\n  match /databases/{db}/documents {\n    match /teams/{code} {\n      allow get: if request.auth != null;\n      allow list: if false;\n      allow create, update: if request.auth != null;\n      match /items/{i} {\n        allow read, write: if request.auth != null;\n      }\n    }\n  }\n}";
+var RULES="rules_version = '2';\nservice cloud.firestore {\n  match /databases/{db}/documents {\n    match /teams/{code} {\n      allow get: if request.auth != null;\n      allow list: if false;\n      allow create, update: if request.auth != null;\n      match /items/{i} {\n        allow read, write: if request.auth != null;\n      }\n    }\n    match /users/{u}/projects/{p} {\n      allow read, write: if request.auth != null && request.auth.uid == u;\n      match /items/{i} {\n        allow read, write: if request.auth != null && request.auth.uid == u;\n      }\n    }\n  }\n}";
 var FRESH=200000;          /* una presenza più vecchia di così (nessun battito) non blocca più nulla */
 var HB_ON=75000,HB_OFF=240000,IDLE=180000;
 var LS=window.localStorage,_set=Storage.prototype.setItem;
@@ -5649,11 +5649,13 @@ function init(){
     fb=window.firebase;if(!fb.apps.length)fb.initializeApp(cfg);db=fb.firestore();
     /* cache sul dispositivo: si lavora anche senza rete e le modifiche partono al ritorno */
     return db.enablePersistence({synchronizeTabs:true}).then(function(){},function(){});
-  }).then(function(){return fb.auth().signInAnonymously()}).then(function(c){
+  }).then(function(){return new Promise(function(res){var un=fb.auth().onAuthStateChanged(function(x){un();res(x)})})}).then(function(cu){return cu?{user:cu}:fb.auth().signInAnonymously()}).then(function(c){
     uid=c.user.uid;
     /* legami a progetti che non esistono più in questo browser (cancellati dalla home in passato): li tolgo */
     var dropped=false;Object.keys(links).forEach(function(k){if(!localAlive(k)){setPrev(links[k].code,k);delete links[k];dropped=true}});if(dropped)jset('ciak-team-links',links);
-    Object.keys(links).forEach(function(k){listen(k);push(k)});startLoops();return uid;
+    Object.keys(links).forEach(function(k){listen(k);push(k)});startLoops();
+    if(!c.user.isAnonymous&&c.user.email)aOn(c.user.email.split('@')[0]);
+    return uid;
   }).catch(function(e){ready=null;throw e});
   return ready;
 }
@@ -5804,7 +5806,7 @@ function markResync(k,ids){
 }
 
 /* ---------- sincronizzazione progetto <-> cloud (un documento per inquadratura / scena) ---------- */
-Storage.prototype.setItem=function(k){_set.apply(this,arguments);if(this===LS&&!applying&&links[k]&&uid)sched(k)};
+Storage.prototype.setItem=function(k){_set.apply(this,arguments);if(this===LS&&!applying&&links[k]&&uid)sched(k);if(this===LS&&!applying&&acct&&acct.on&&/^ciak-(project|sw-p)-/.test(k))aSched(k)};
 function sched(k){clearTimeout(timers[k]);timers[k]=setTimeout(function(){push(k)},1200)}
 function chunkRun(ops,done,fail){
   var i=0;(function next(){
@@ -6052,7 +6054,7 @@ function leave(key,sub,quiet){
   decorateSoon();render();if(!quiet)toast('Sincronizzazione interrotta');
 }
 /* progetto cancellato dalla home: tolgo il collegamento al team, altrimenti resta un legame orfano */
-window.__ciakTeamForget=function(key){try{if(links[key]){setPrev(links[key].code,key);leave(key,true,true)}}catch(e){}};
+window.__ciakTeamForget=function(key){try{aTomb(key)}catch(e){}try{if(links[key]){setPrev(links[key].code,key);leave(key,true,true)}}catch(e){}};
 window.__ciakTeamApi={
   isShared:function(k){return !!links[k]},
   shareMany:function(list){
@@ -6063,6 +6065,133 @@ window.__ciakTeamApi={
   },
   openTeam:function(keys){var k=keys.filter(function(x){return links[x]})[0];sel=k?links[k].code:null;openPanel(true)}
 };
+
+/* ---------- ACCOUNT personale: nome utente + password (nessuna email), progetti sempre con te ---------- */
+var DEV=jget('ciak-acct-dev',null);if(!DEV){DEV=Math.random().toString(36).slice(2,12);jset('ciak-acct-dev',DEV)}
+var acct={u:null,on:false,state:'',busy:false},aH=jget('ciak-acct-h',{}),aUnsub=null,aT={},aKnown={},aDocs={},aRemoving=false;
+function aName(u){return String(u||'').trim().toLowerCase()}
+function aValid(u){return /^[a-z0-9._-]{3,24}$/.test(u)}
+function aEmail(u){return u+'@ciak-app.invalid'}
+function aCol(){return db.collection('users').doc(uid).collection('projects')}
+function aProjKey(k){var m=/^ciak-(sw-p|project)-(.+)$/.exec(k);return m?{kind:m[1]==='sw-p'?'sw':'sb',id:m[2],doc:(m[1]==='sw-p'?'sw-':'sb-')+m[2]}:null}
+function aLocalKey(kind,id){return (kind==='sw'?'ciak-sw-p-':'ciak-project-')+id}
+function aErr(e){
+  var c=e&&e.code;
+  if(c==='auth/email-already-in-use'||c==='auth/credential-already-in-use')return 'Questo nome utente è già preso: scegline un altro.';
+  if(c==='auth/invalid-credential'||c==='auth/wrong-password'||c==='auth/user-not-found'||c==='auth/invalid-login-credentials')return 'Nome utente o password sbagliati.';
+  if(c==='auth/weak-password')return 'Password troppo corta: servono almeno 6 caratteri.';
+  if(c==='auth/operation-not-allowed')return 'Nella console Firebase abilita Authentication › Metodo di accesso › Email/password.';
+  if(c==='auth/too-many-requests')return 'Troppi tentativi: riprova tra qualche minuto.';
+  if(c==='auth/network-request-failed')return 'Nessuna connessione.';
+  return niceErr(e);
+}
+function aSched(k){clearTimeout(aT[k]);aT[k]=setTimeout(function(){aPush(k)},4000)}
+function aPush(k){
+  var P=aProjKey(k);if(!P||!acct.on||!uid||!db||!localAlive(k))return;
+  var v=LS.getItem(k),m=jget(idxKey(P.kind),[]).filter(function(x){return x.id===P.id})[0];if(!m)return;
+  var prev=aH[P.doc]||{},p;try{p=Core.planPush(P.kind,v,prev)}catch(e){return}
+  var upd=m.updated||Date.now();
+  if(p.empty&&aH[P.doc]&&aKnown[P.doc]>=upd)return;
+  var big=Object.keys(p.set).filter(function(id){return bytes(p.set[id])>900000})[0];
+  if(big){acct.state='«'+m.title+'» ha un elemento troppo grande per il cloud (~1 MB): alleggerisci le immagini.';render();return}
+  var dr=aCol().doc(P.doc),ops=[],doc={kind:P.kind,id:P.id,title:m.title||'',updated:upd,dev:DEV,del:false,link:m.link||null};
+  if(p.meta!==null)doc.meta=p.meta;if(p.order!==null)doc.order=p.order;
+  Object.keys(p.set).forEach(function(id){ops.push(function(b){b.set(dr.collection('items').doc(id),{d:p.set[id]})})});
+  p.del.forEach(function(id){ops.push(function(b){b.delete(dr.collection('items').doc(id))})});
+  ops.push(function(b){b.set(dr,doc,{merge:true})});   /* il documento principale per ultimo: chi legge trova già tutto */
+  aKnown[P.doc]=upd;acct.state='Salvataggio nel cloud…';render();
+  chunkRun(ops,function(){aH[P.doc]=p.base;jset('ciak-acct-h',aH);aDocs[P.doc]=false;acct.state=aCount();render()},function(e){delete aKnown[P.doc];acct.state='Sync account non riuscita: '+aErr(e);render();setTimeout(function(){aPush(k)},20000)});
+}
+function aCount(){var n=0;Object.keys(aDocs).forEach(function(d){if(!aDocs[d])n++});return 'Sincronizzato · '+n+(n===1?' progetto nel cloud':' progetti nel cloud')}
+function aRemoveLocal(kind,id){
+  var k=aLocalKey(kind,id);if(bridgeFor(k))return;
+  aRemoving=true;try{(kind==='sw'?window.__ciakSw:window.__ciakSb).remove(id)}catch(e){}aRemoving=false;
+  refreshHome();
+}
+function aTomb(k){
+  var P=aProjKey(k);if(!P||!acct.on||!uid||!db||aRemoving)return;
+  var dr=aCol().doc(P.doc),t=Date.now(),D=fb.firestore.FieldValue.delete();
+  delete aH[P.doc];jset('ciak-acct-h',aH);aKnown[P.doc]=t;aDocs[P.doc]=true;clearTimeout(aT[k]);
+  dr.set({kind:P.kind,id:P.id,del:true,updated:t,dev:DEV,title:'',meta:D,order:D},{merge:true})
+    .then(function(){return dr.collection('items').get()})
+    .then(function(q){var ops=[];q.docs.forEach(function(x){ops.push(function(b){b.delete(x.ref)})});return new Promise(function(res,rej){chunkRun(ops,res,rej)})})
+    .catch(function(){});
+}
+function aPull(docId,d){
+  var kind=d.kind,id=d.id,k=aLocalKey(kind,id);
+  if(bridgeFor(k)){setTimeout(function(){aPull(docId,d)},20000);return}   /* aperto nell'editor: aspetto che lo chiudi */
+  return aCol().doc(docId).collection('items').get().then(function(q){
+    var its={};q.docs.forEach(function(x){var y=x.data();if(y&&typeof y.d==='string')its[x.id]=y.d});
+    var json=Core.assemble(kind,d.meta,d.order||[],its,0);
+    applying=true;try{_set.call(LS,k,json)}finally{applying=false}
+    var a=jget(idxKey(kind),[]),m=a.filter(function(x){return x.id===id})[0];
+    if(!m){m={id:id};a.push(m)}
+    m.title=d.title||'';m.updated=d.updated;
+    if(kind==='sb'){try{m.n=JSON.parse(json).panels.length}catch(e){}if(d.link){m.link=d.link;delete m.sig;a=a.filter(function(x){return x===m||x.link!==d.link})}}
+    jset(idxKey(kind),a);
+    aH[docId]=Core.planPush(kind,json,{}).base;jset('ciak-acct-h',aH);aKnown[docId]=d.updated;
+    refreshHome();try{if(kind==='sw'&&window.__ciakSw&&window.__ciakSw.resync)window.__ciakSw.resync()}catch(e){}
+  }).catch(function(e){acct.state='Sync account non riuscita: '+aErr(e);render()});
+}
+function aSeen(docId,d){
+  if(!d||!d.kind||!d.id)return;
+  if(d.dev===DEV&&aKnown[docId]===d.updated)return;   /* l'ho scritto io */
+  var k=aLocalKey(d.kind,d.id),alive=localAlive(k),m=jget(idxKey(d.kind),[]).filter(function(x){return x.id===d.id})[0],lu=m?(m.updated||0):0;
+  if(d.del){if(alive&&lu<=d.updated)aRemoveLocal(d.kind,d.id);return}
+  if(!alive||d.updated>lu+1000){if(links[k]&&alive)return;aPull(docId,d);return}   /* i progetti in team li governa il team */
+  if(lu>d.updated+1000)aPush(k);
+}
+function aOn(u){
+  if(aUnsub){aUnsub();aUnsub=null}
+  acct.on=true;acct.u=u;acct.state='Collegamento…';aDocs={};aKnown={};jset('ciak-acct',{u:u});
+  var first=false;
+  aUnsub=aCol().onSnapshot(function(q){
+    q.docs.forEach(function(x){aDocs[x.id]=!!x.data().del});
+    q.docChanges().forEach(function(ch){if(ch.type!=='removed')aSeen(ch.doc.id,ch.doc.data())});
+    if(!first){first=true;['sb','sw'].forEach(function(kind){jget(idxKey(kind),[]).forEach(function(m){var d=(kind==='sw'?'sw-':'sb-')+m.id;if(!(d in aDocs))aPush(aLocalKey(kind,m.id))})})}
+    acct.state=aCount();render();
+  },function(e){acct.state=aErr(e);render()});
+  render();
+}
+function aSignUp(u,p){
+  u=aName(u);if(!aValid(u))return Promise.reject({message:'Il nome utente deve avere 3-24 caratteri: lettere, numeri, punto, trattino.'});
+  var cu=fb.auth().currentUser,cred=fb.auth.EmailAuthProvider.credential(aEmail(u),p);
+  var pr=(cu&&cu.isAnonymous)?cu.linkWithCredential(cred):fb.auth().createUserWithEmailAndPassword(aEmail(u),p);   /* da anonimo: stessa identità, i team restano tuoi */
+  return pr.then(function(r){uid=r.user.uid;aOn(u);toast('Profilo creato: i tuoi progetti vengono salvati nel cloud',4000)});
+}
+function aSignIn(u,p){
+  u=aName(u);
+  return fb.auth().signInWithEmailAndPassword(aEmail(u),p).then(function(r){uid=r.user.uid;aOn(u);toast('Accesso eseguito',3000)});
+}
+function aSignOut(){
+  if(!window.confirm('Uscire dall’account? I progetti restano su questo dispositivo ma smettono di sincronizzarsi.'))return;
+  if(aUnsub){aUnsub();aUnsub=null}
+  acct.on=false;acct.u=null;acct.state='';try{LS.removeItem('ciak-acct')}catch(e){}
+  fb.auth().signOut().then(function(){return fb.auth().signInAnonymously()}).then(function(c){uid=c.user.uid;render()}).catch(function(){render()});
+  render();
+}
+function acctView(b){
+  var msg=h('div',{id:'tmAErr','class':'msg'});
+  if(acct.on){
+    b.appendChild(h('div',{'class':'card'},[h('h4',{text:'Il tuo account'}),
+      h('div',{style:'font-weight:700',text:acct.u}),
+      h('div',{'class':'st'+(/non riuscita|Permesso|Regole/.test(acct.state)?' bad':''),text:acct.state||'—'}),
+      h('div',{'class':'row',style:'margin-top:8px;gap:6px'},[
+        h('button',{'class':'tb',type:'button',text:'Sincronizza ora',onclick:function(){['sb','sw'].forEach(function(kind){jget(idxKey(kind),[]).forEach(function(m){aPush(aLocalKey(kind,m.id))})})}}),
+        h('button',{'class':'tb',type:'button',text:'Esci',onclick:aSignOut})])]));
+    return;
+  }
+  var un=h('input',{id:'tmAU',placeholder:'Nome utente',maxlength:'24',autocomplete:'username',autocapitalize:'none',spellcheck:'false'});
+  var pw=h('input',{id:'tmAP',type:'password',placeholder:'Password (min. 6 caratteri)',autocomplete:'current-password'});
+  function run(f){if(acct.busy)return;msg.textContent='';acct.busy=true;f(un.value,pw.value).then(function(){acct.busy=false},function(e){acct.busy=false;msg.textContent=aErr(e)})}
+  pw.onkeydown=function(e){if(e.key==='Enter')run(aSignIn)};
+  b.appendChild(h('div',{'class':'card'},[h('h4',{text:'Account (facoltativo)'}),
+    h('p',{'class':'msg',text:'Solo nome utente e password, nessuna email: i tuoi progetti si salvano nel cloud e li ritrovi da qualsiasi dispositivo. Attenzione: senza email la password non si può recuperare.'}),
+    un,pw,
+    h('div',{'class':'row',style:'margin-top:8px;gap:6px'},[
+      h('button',{'class':'tb p',type:'button',text:'Accedi',onclick:function(){run(aSignIn)}}),
+      h('button',{'class':'tb',type:'button',text:'Crea profilo',onclick:function(){run(aSignUp)}})]),msg]));
+}
 function saveMe(){jset('ciak-team-me',me);if(uid)Object.keys(links).forEach(function(k){writePresence(k)});render()}
 function copy(txt,msg){
   var ok=function(){toast(msg)},ko=function(){window.prompt('Copia da qui:',txt)};
@@ -6114,6 +6243,7 @@ function render(){
   nm.onchange=function(){me.name=nm.value.trim();saveMe()};rs.onchange=function(){me.role=rs.value;saveMe()};gs.onchange=function(){me.g=gs.value;saveMe()};
   b.appendChild(h('div',{},[h('h4',{text:'Il tuo profilo'}),nm,rs,gs]));
   if(!uid){b.appendChild(h('div',{'class':'msg',id:'tmErr',text:navigator.onLine===false?'Sei offline: il team si collegherà appena torna la rete.':'Connessione al team in corso…'}));restore(b,keep,top);return}
+  acctView(b);
   /* condividi */
   var ps=projectList().filter(function(p){return !links[p.key]}),sp=h('select',{id:'tmPick'},ps.map(function(p,i){return h('option',{value:i,text:p.label})}));
   b.appendChild(h('div',{},[h('h4',{text:'Condividi un progetto'}),ps.length?sp:h('div',{'class':'msg',text:'Nessun progetto da condividere.'}),
