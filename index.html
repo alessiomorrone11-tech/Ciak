@@ -5461,6 +5461,8 @@ td.sn .tm-dots{margin-left:6px}
 #acBtn img{width:30px;height:30px;border-radius:50%;flex:none;display:block;background:var(--surface2)}
 #acBtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mob #acBtn{padding:0 4px;max-width:none}.mob #acBtn span{display:none}
+/* dentro un progetto (storyboard, sceneggiatura, produzione) il pulsante resta in alto accanto a «Progetti» e scorre con la pagina; fisso solo nella home */
+html.ac-proj #acBtn{position:absolute}
 @media (max-width:1724px){.top,.swtop{padding-left:var(--ac-w,0px)}}
 .mob .top,.mob .swtop{padding-left:0;padding-top:56px}
 @media (max-width:1724px){.mob .top,.mob .swtop{padding-left:0}}
@@ -6806,6 +6808,13 @@ function openPanel(on){
 }
 $('#tmX').onclick=function(){openPanel(false)};
 $('#acBtn').onclick=function(){openAccount(!$('#acPanel').classList.contains('on'))};
+/* segue lo stato della home: nascosta = sono dentro un progetto */
+(function(){
+  var hv=$('#viewHome');if(!hv)return;
+  function sync(){document.documentElement.classList.toggle('ac-proj',!!hv.hidden)}
+  sync();
+  try{new MutationObserver(sync).observe(hv,{attributes:true,attributeFilter:['hidden']})}catch(e){setInterval(sync,500)}
+})();
 $('#acX').onclick=function(){openAccount(false)};
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){if($('#tmPanel').classList.contains('on'))openPanel(false);else if($('#acPanel').classList.contains('on'))openAccount(false)}});
 window.addEventListener('online',function(){render();if(!uid&&cfg){ready=null;init().then(render).catch(function(){})}});
