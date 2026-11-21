@@ -6280,6 +6280,25 @@ function pdRef(c){return db.collection('productions').doc(c)}
 function pdMine(){return db.collection('users').doc(uid).collection('prods')}
 function pdMe(){return {name:me.name||acct.u||'Senza nome',role:me.role,g:me.g,av:me.av||'',u:acct.u||'',ts:Date.now()}}
 function pdName(){if(!me.name&&acct.u){me.name=acct.u;jset('ciak-team-me',me)}}
+/* ruoli unici: in una produzione un ruolo può averlo una sola persona («Altro sul set» resta sempre libero) */
+var RFREE='altro';
+function pdTaken(){
+  var t={};
+  Object.keys(prods).forEach(function(c){var d=prods[c];if(!d||d.gone||d.closed)return;var M=d.members||{};
+    Object.keys(M).forEach(function(u){var m=M[u];if(u===uid||!m||!m.role||m.role===RFREE)return;if(!t[m.role])t[m.role]=m.name||'un collega'})});
+  return t;
+}
+/* se il mio ruolo è già di un altro (es. entro in una produzione con il ruolo predefinito già occupato) passo al primo ruolo libero; a parità di ruolo cede chi è entrato dopo */
+function pdRoleFix(){
+  if(!me.role||me.role===RFREE)return;
+  var lose=false,by='';
+  Object.keys(prods).forEach(function(c){var d=prods[c];if(!d||d.gone||d.closed)return;var M=d.members||{},mine=!!(M[uid]&&M[uid].role===me.role);
+    Object.keys(M).forEach(function(u){if(u===uid||!M[u]||M[u].role!==me.role)return;if(!mine||u<uid){lose=true;by=M[u].name||'un collega'}})});
+  if(!lose)return;
+  var t=pdTaken(),old=me.role,n=ROLES.filter(function(r){return r[0]!==RFREE&&!t[r[0]]})[0];
+  me.role=n?n[0]:RFREE;jset('ciak-team-me',me);
+  toast('Il ruolo «'+roleLabel(old,me.g)+'» era già di '+by+': ora sei «'+roleLabel(me.role,me.g)+'». Puoi cambiarlo nella sezione Produzione.',6000);
+}
 function pdClean(c){return String(c||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'')}
 function pdE(e){var m=niceErr(e);if(e&&(e.code==='permission-denied'||/permission/i.test(e.message||'')))pdRules=true;pdErrT=m;toast(m);var x=$('#pdErr');if(x)x.textContent=m;render()}
 function pdInvite(c){if(!/^https?:$/.test(location.protocol))return '';var u=location.origin+location.pathname+'?prod='+c;if(cfg&&cfg!==BUILTIN_CFG){try{u+='&fb='+encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(cfg)))))}catch(e){}}return u}
@@ -6317,7 +6336,7 @@ function pdDrop(c){
   if(uid&&fb){var f={};f['members.'+uid]=fb.firestore.FieldValue.delete();pdRef(c).update(f).catch(function(){})}
   delete prods[c];render();
 }
-function pdPres(c){pdW[c]=Date.now();var o={};o['members.'+uid]=pdMe();pdRef(c).update(o).catch(function(){})}
+function pdPres(c){pdRoleFix();pdW[c]=Date.now();var o={};o['members.'+uid]=pdMe();pdRef(c).update(o).catch(function(){})}
 function pdPresAll(){if(uid&&acct.on)Object.keys(pdL).forEach(function(c){if(prods[c]&&!prods[c].gone)pdPres(c)})}
 function pdBeat(){if(!uid||!acct.on||document.visibilityState==='hidden'||!active())return;Object.keys(pdL).forEach(function(c){if(prods[c]&&!prods[c].gone&&Date.now()-(pdW[c]||0)>80000)pdPres(c)})}
 function pdCreate(name){
@@ -6416,10 +6435,11 @@ function pdView(b){
   var codes=Object.keys(prods).filter(function(c){return prods[c]}).sort(function(a,z){return String(prods[a].name||a).localeCompare(String(prods[z].name||z))});
   var card=h('div',{'class':'card pd'},[h('h4',{text:'Produzione'}),h('p',{'class':'msg',text:'Crea un gruppo con altre persone e scegli quali progetti condividere: tutti i membri possono aprire e modificare sceneggiatura, storyboard e produzione.'})]);
   var pn=h('input',{id:'pdMeName',type:'text',placeholder:'Il tuo nome',maxlength:'40',autocomplete:'off',value:me.name||''}),
-      pr=h('select',{id:'pdRole','aria-label':'Il tuo ruolo'},ROLES.map(function(r){var o=h('option',{value:r[0],text:roleLabel(r[0],me.g)});if(r[0]===me.role)o.selected=true;return o})),
+      tk=pdTaken(),
+      pr=h('select',{id:'pdRole','aria-label':'Il tuo ruolo'},ROLES.map(function(r){var bad=r[0]!==me.role&&tk[r[0]],o=h('option',{value:r[0],text:roleLabel(r[0],me.g)+(bad?' — già preso da '+tk[r[0]]:'')});if(bad)o.disabled=true;if(r[0]===me.role)o.selected=true;return o})),
       pg=h('select',{id:'pdG','aria-label':'Forma del ruolo'},[['M','Al maschile (es. Sceneggiatore)'],['F','Al femminile (es. Sceneggiatrice)']].map(function(r){var o=h('option',{value:r[0],text:r[1]});if(r[0]===me.g)o.selected=true;return o}));
-  pn.onchange=function(){me.name=pn.value.trim();saveMe()};pr.onchange=function(){me.role=pr.value;saveMe()};pg.onchange=function(){me.g=pg.value;saveMe()};
-  card.appendChild(h('div',{},[h('h5',{'class':'pdh',text:'Il tuo ruolo nella produzione'}),pn,pr,pg]));
+  pn.onchange=function(){me.name=pn.value.trim();saveMe()};pr.onchange=function(){var t2=pdTaken();if(pr.value!==RFREE&&t2[pr.value]){toast('Il ruolo «'+roleLabel(pr.value,me.g)+'» è già di '+t2[pr.value]);pr.value=me.role;return}me.role=pr.value;saveMe()};pg.onchange=function(){me.g=pg.value;saveMe()};
+  card.appendChild(h('div',{},[h('h5',{'class':'pdh',text:'Il tuo ruolo nella produzione'}),pn,pr,pg,Object.keys(prods).some(function(c){return prods[c]&&!prods[c].gone&&!prods[c].closed})?h('div',{'class':'kv',text:'I ruoli già presi dagli altri membri non si possono scegliere («Altro sul set» è sempre libero).'}):null]));
   codes.forEach(function(c){card.appendChild(pdCard(c))});
   var nm=h('input',{id:'pdName',type:'text',placeholder:'Nome della produzione',maxlength:'60',autocomplete:'off',value:pdD.name}),cd=h('input',{id:'pdCode',type:'text',placeholder:'Codice produzione (es. K7M2QX)',maxlength:'8',autocapitalize:'characters',autocomplete:'off',value:pdD.code||pendingProd});
   var mk=function(){pdCreate(nm.value).catch(pdE)},go=function(){pdJoin(cd.value).catch(pdE)};
@@ -6843,6 +6863,19 @@ body.selmode .pcard.picked{outline:3px solid var(--accent,#f5b301);outline-offse
 .pcard.picked .selbox{background:var(--accent,#f5b301)}
 #selBar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;max-width:calc(100vw - 20px);padding:8px 10px;background:var(--surface,#222);border:1px solid var(--line,#555);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.45)}
 #selBar[hidden]{display:none}
+/* ===== CARTELLE ===== */
+.pf-bar{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pf-bar .pf-sp{flex:1}
+.pf-bar .btn svg{width:16px;height:16px;vertical-align:-3px;margin-right:2px}
+.pf-title{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:22px;letter-spacing:.04em;min-width:0;overflow-wrap:anywhere}
+.pf-title svg{width:24px;height:24px;color:var(--accent);flex:none}
+.pf-title small{font-family:var(--font-mono);font-size:13px;color:var(--muted);letter-spacing:0}
+.pf-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.pf-thumb{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:16/9;padding:0;border:0;background:#1b1e23;color:var(--accent);cursor:pointer}
+.pf-thumb svg{width:34%;height:auto;max-height:70%}
+.pf-thumb:hover{color:#fff}
+.pf-mv{width:100%;margin-top:2px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;font-size:12.5px;box-sizing:border-box}
+@media print{.pf-x{display:none!important}}
 #selBar b{font-size:13px;margin-right:4px}
 </style>
 <script>
@@ -6934,6 +6967,139 @@ function build(){
   ['#hubTSb','#hubTSw','#hubTPr'].forEach(function(s){var e=$(s);if(e)e.addEventListener('click',function(){if(on)setMode(false)})});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',build);else build();
+})();
+</script>
+
+<script>
+/* ===== CARTELLE: raggruppa progetti e sceneggiature nella pagina iniziale ===== */
+(function(){
+var KEY='ciak-folders-v1',LS=window.localStorage,MOB=document.documentElement.classList.contains('mob');
+var LISTS=[
+  {sel:'#projects',kind:'sb',att:'data-popen',one:'progetto',many:'progetti'},
+  {sel:'#swProjects',kind:'sw',att:'data-o',one:'sceneggiatura',many:'sceneggiature'},
+  {sel:'#edHubList',kind:'sb',att:'data-edo',one:'progetto',many:'progetti'}
+];
+var ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>';
+function $(s){return document.querySelector(s)}
+function esc(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function toast(m){var t=$('#toast');if(!t)return;t.textContent=m;t.classList.add('on');setTimeout(function(){t.classList.remove('on')},2600)}
+function load(){
+  var o;try{o=JSON.parse(LS.getItem(KEY)||'{}')}catch(e){o={}}
+  if(!o||typeof o!=='object')o={};
+  ['sb','sw'].forEach(function(k){
+    var x=o[k]&&typeof o[k]==='object'?o[k]:{};
+    x.f=Array.isArray(x.f)?x.f.filter(function(f){return f&&typeof f.id==='string'&&typeof f.name==='string'}):[];
+    x.m=x.m&&typeof x.m==='object'&&!Array.isArray(x.m)?x.m:{};
+    o[k]=x;
+  });
+  return o;
+}
+function save(o){try{LS.setItem(KEY,JSON.stringify(o))}catch(e){toast('Non riesco a salvare le cartelle')}}
+function idsOf(kind){try{var a=JSON.parse(LS.getItem(kind==='sw'?'ciak-sw-index':'ciak-index-v2')||'[]');return Array.isArray(a)?a.map(function(x){return x&&x.id}):[]}catch(e){return[]}}
+function askName(def){var n=window.prompt('Nome della cartella:',def||'');if(n==null)return null;n=n.replace(/\s+/g,' ').trim().slice(0,40);return n||null}
+function newFolder(d,name){var f={id:'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),name:name};d.f.push(f);return f}
+function isCard(c){return c.classList&&c.classList.contains('pcard')}
+function pidOf(L,c){var e=c.querySelector('['+L.att+']');return e?e.getAttribute(L.att):null}
+function plural(L,n){return n+' '+(n===1?L.one:L.many)}
+
+function layout(L){
+  var box=$(L.sel);if(!box||!L.all)return;
+  var D=load(),d=D[L.kind],valid={};d.f.forEach(function(f){valid[f.id]=f});
+  if(L.cur&&!valid[L.cur])L.cur=null;
+  var cur=L.cur,fold=function(c){var f=d.m[pidOf(L,c)];return valid[f]?f:null};
+  var cards=L.all.filter(isCard),cnt={};
+  cards.forEach(function(c){var f=fold(c);if(f)cnt[f]=(cnt[f]||0)+1});
+  var frag=document.createDocumentFragment(),el;
+  /* barra superiore */
+  if(cur){
+    var cf=valid[cur];
+    el=document.createElement('div');el.className='pf-x pf-bar';
+    el.innerHTML='<button type="button" class="btn" data-pf-back="1">&lsaquo; Tutti</button><span class="pf-title">'+ICON+'<span>'+esc(cf.name)+'</span><small>('+(cnt[cur]||0)+')</small></span><span class="pf-sp"></span>'+
+      (MOB?'':'<button type="button" class="btn" data-pf-ren="'+cur+'">Rinomina</button><button type="button" class="btn danger" data-pf-del="'+cur+'">Elimina cartella</button>');
+    frag.appendChild(el);
+  }else if(!MOB){
+    el=document.createElement('div');el.className='pf-x pf-bar';
+    el.innerHTML='<span class="pf-sp"></span><button type="button" class="btn" data-pf-new="1">'+ICON+' Nuova cartella</button>';
+    frag.appendChild(el);
+  }
+  /* cartelle (solo nella pagina principale) */
+  if(!cur){
+    d.f.slice().sort(function(a,b){return a.name.localeCompare(b.name,'it')}).forEach(function(f){
+      el=document.createElement('article');el.className='pf-x pf-card';
+      el.innerHTML='<button type="button" class="pf-thumb" data-pf-open="'+f.id+'" aria-label="Apri la cartella '+esc(f.name)+'">'+ICON+'</button><div class="pbd"><h3>'+esc(f.name)+'</h3><div class="kv">'+plural(L,cnt[f.id]||0)+'</div><div class="pact"><button type="button" class="btn primary" data-pf-open="'+f.id+'">Apri</button>'+
+        (MOB?'':'<button type="button" class="btn" data-pf-ren="'+f.id+'">Rinomina</button><button type="button" class="btn danger" data-pf-del="'+f.id+'">Elimina</button>')+'</div></div>';
+      frag.appendChild(el);
+    });
+  }
+  /* "nuovo" e progetti della vista corrente */
+  var shown=0,pnew=L.all.filter(function(c){return c.classList&&c.classList.contains('pnew')})[0],noproj=L.all.filter(function(c){return c.classList&&c.classList.contains('noproj')})[0];
+  if(pnew)frag.appendChild(pnew);
+  cards.forEach(function(c){
+    if(fold(c)!==cur)return;shown++;
+    var old=c.querySelector('.pf-mv');if(old)old.remove();
+    if(!MOB&&pidOf(L,c)){
+      var bd=c.querySelector('.pbd'),f0=fold(c);
+      if(bd){
+        var s=document.createElement('select');s.className='pf-x pf-mv';s.setAttribute('aria-label','Sposta in una cartella');
+        var h='<option value="" selected disabled hidden>'+(f0?'Cartella: '+esc(valid[f0].name):'Sposta in cartella…')+'</option>';
+        if(f0)h+='<option value="-">Fuori dalla cartella</option>';
+        d.f.slice().sort(function(a,b){return a.name.localeCompare(b.name,'it')}).forEach(function(f){if(f.id!==f0)h+='<option value="'+f.id+'">'+esc(f.name)+'</option>'});
+        h+='<option value="+">Nuova cartella…</option>';
+        s.innerHTML=h;bd.appendChild(s);
+      }
+    }
+    frag.appendChild(c);
+  });
+  if(cur&&!shown){el=document.createElement('p');el.className='pf-x noproj';el.textContent='Cartella vuota.'+(MOB?'':' Usa «Sposta in cartella…» su un progetto per metterlo qui.');frag.appendChild(el)}
+  else if(!cur&&noproj&&!d.f.length)frag.appendChild(noproj);
+  L.busy=true;if(L.obs)L.obs.disconnect();
+  box.textContent='';box.appendChild(frag);
+  if(L.obs)L.obs.observe(box,{childList:true});L.busy=false;
+}
+function layoutKind(kind){LISTS.forEach(function(L){if(L.kind===kind)layout(L)})}
+function snapshot(L){var box=$(L.sel);if(!box)return;L.all=[].filter.call(box.children,function(c){return !c.classList.contains('pf-x')});layout(L)}
+
+LISTS.forEach(function(L){
+  var box=$(L.sel);if(!box)return;
+  L.cur=null;
+  L.obs=new MutationObserver(function(){if(!L.busy)snapshot(L)});
+  /* in capture, così funziona anche in modalità «Seleziona» */
+  box.addEventListener('click',function(e){
+    var t=e.target;if(!t.closest)return;
+    var o=t.closest('[data-pf-open]'),b=t.closest('[data-pf-back]'),n=t.closest('[data-pf-new]'),r=t.closest('[data-pf-ren]'),x=t.closest('[data-pf-del]');
+    if(o){e.stopPropagation();L.cur=o.getAttribute('data-pf-open');layout(L);return}
+    if(b){e.stopPropagation();L.cur=null;layout(L);return}
+    if(n){e.stopPropagation();var nm=askName('');if(!nm)return;var D=load();var f=newFolder(D[L.kind],nm);save(D);layoutKind(L.kind);toast('Cartella «'+nm+'» creata');return}
+    if(r){e.stopPropagation();var D2=load(),f2=D2[L.kind].f.filter(function(f){return f.id===r.getAttribute('data-pf-ren')})[0];if(!f2)return;var nn=askName(f2.name);if(!nn)return;f2.name=nn;save(D2);layoutKind(L.kind);return}
+    if(x){
+      e.stopPropagation();var id=x.getAttribute('data-pf-del'),D3=load(),f3=D3[L.kind].f.filter(function(f){return f.id===id})[0];if(!f3)return;
+      if(!window.confirm('Eliminare la cartella «'+f3.name+'»?\nI progetti al suo interno NON vengono eliminati: tornano nell’elenco principale.'))return;
+      D3[L.kind].f=D3[L.kind].f.filter(function(f){return f.id!==id});
+      Object.keys(D3[L.kind].m).forEach(function(k){if(D3[L.kind].m[k]===id)delete D3[L.kind].m[k]});
+      save(D3);LISTS.forEach(function(l){if(l.kind===L.kind&&l.cur===id)l.cur=null});layoutKind(L.kind);toast('Cartella eliminata');return;
+    }
+    /* un nuovo progetto (o una copia) creato dentro una cartella ci resta */
+    if(L.cur&&!MOB&&t.closest('[data-hnew],[data-n],[data-pact="dup"],[data-a="dup"]')){
+      var before=idsOf(L.kind),at=L.cur;
+      setTimeout(function(){
+        var D4=load(),fresh=idsOf(L.kind).filter(function(i){return i&&before.indexOf(i)<0});
+        if(!fresh.length||!D4[L.kind].f.some(function(f){return f.id===at}))return;
+        fresh.forEach(function(i){D4[L.kind].m[i]=at});save(D4);layoutKind(L.kind);
+      },250);
+    }
+  },true);
+  box.addEventListener('change',function(e){
+    var s=e.target;if(!s.classList||!s.classList.contains('pf-mv'))return;
+    var c=s.closest('.pcard'),pid=c&&pidOf(L,c);if(!pid)return;
+    var D=load(),d=D[L.kind],v=s.value,name='';
+    if(v==='+'){var nm=askName('');if(!nm){layoutKind(L.kind);return}var f=newFolder(d,nm);v=f.id;name=nm}
+    if(v==='-')delete d.m[pid];else{d.m[pid]=v;if(!name){var g=d.f.filter(function(f){return f.id===v})[0];name=g?g.name:''}}
+    save(D);layoutKind(L.kind);
+    toast(v==='-'?'Tolto dalla cartella':'Spostato in «'+name+'»');
+  });
+  L.obs.observe(box,{childList:true});
+  if(box.children.length)snapshot(L);
+});
 })();
 </script>
 
