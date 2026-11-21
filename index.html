@@ -5498,6 +5498,18 @@ td.sn .tm-dots{margin-left:6px}
 #acPanel .big img{width:56px;height:56px;border-radius:50%;flex:none}
 #acPanel .warn{font-size:12px;color:var(--muted);margin:2px 0 8px}
 #tmPanel .mem i.av{background-size:cover;background-position:center}
+#acPanel .mem{display:inline-flex;align-items:center;gap:6px;margin:2px 4px 2px 0;padding:2px 9px 2px 3px;border-radius:999px;border:1px solid var(--line);font-size:12px}
+#acPanel .mem i{width:18px;height:18px;border-radius:50%;background:var(--line);flex:none;color:#fff;font:700 9px/18px system-ui,sans-serif;text-align:center;font-style:normal;opacity:.45;background-size:cover;background-position:center}
+#acPanel .mem.on i{opacity:1}
+#acPanel .code{font:700 20px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;padding:6px 10px;border:1px dashed var(--line);border-radius:6px;user-select:all}
+#acPanel .pd{display:flex;flex-direction:column;gap:10px}
+#acPanel .pdp{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--surface);display:flex;flex-direction:column;gap:7px}
+#acPanel .pdp .kv{font-size:12px;color:var(--muted)}
+#acPanel .pdh{margin:6px 0 0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+#acPanel .pdk{display:flex;align-items:center;gap:8px;font-size:13px;padding:2px 0;cursor:pointer}
+#acPanel .pdj{border:1px solid var(--line);border-radius:6px;padding:7px;background:var(--bg);display:flex;flex-direction:column;gap:5px}
+#acPanel button.tb.sm{padding:3px 9px;font-size:12px}
+#acPanel button.tb.dg{color:var(--danger)}
 @media print{#tmFab,#tmPanel,#tmLock,.tm-dots,#acBtn,#acPanel{display:none!important}}
 </style>
 <button id="tmFab" type="button" hidden aria-expanded="false">&#128101; Team<b id="tmN" hidden>0</b></button>
@@ -5619,7 +5631,7 @@ if(typeof module!=='undefined')module.exports=Core;
 /* Per non far incollare la configurazione a ogni collega: incolla qui la tua firebaseConfig come oggetto, es. {apiKey:"…",authDomain:"…",projectId:"…",appId:"…"} */
 var BUILTIN_CFG={apiKey:"AIzaSyCcIsItn-awOJc6SrPIDmD_XmUhZnpyZCw",authDomain:"ciak-e318b.firebaseapp.com",projectId:"ciak-e318b",storageBucket:"ciak-e318b.firebasestorage.app",messagingSenderId:"686854012147",appId:"1:686854012147:web:ce10dd2d0bc54e39970b86"};
 var ROLES=[['regista','Regista','Regista'],['coregista','Co-regista','Co-regista'],['aiuto','Aiuto regia','Aiuto regia'],['operatore','Operatore di macchina','Operatrice di macchina'],['dop','DOP','DOP'],['sceneggiatore','Sceneggiatore','Sceneggiatrice'],['produttore','Produttore','Produttrice'],['altro','Altro sul set','Altro sul set']];
-var RULES="rules_version = '2';\nservice cloud.firestore {\n  match /databases/{db}/documents {\n    match /teams/{code} {\n      allow get: if request.auth != null;\n      allow list: if false;\n      allow create, update: if request.auth != null;\n      match /items/{i} {\n        allow read, write: if request.auth != null;\n      }\n    }\n    match /users/{u}/projects/{p} {\n      allow read, write: if request.auth != null && request.auth.uid == u;\n      match /items/{i} {\n        allow read, write: if request.auth != null && request.auth.uid == u;\n      }\n    }\n  }\n}";
+var RULES="rules_version = '2';\nservice cloud.firestore {\n  match /databases/{db}/documents {\n    match /teams/{code} {\n      allow get: if request.auth != null;\n      allow list: if false;\n      allow create, update: if request.auth != null;\n      match /items/{i} {\n        allow read, write: if request.auth != null;\n      }\n    }\n    match /productions/{code} {\n      allow get: if request.auth != null;\n      allow list: if false;\n      allow create, update: if request.auth != null;\n    }\n    match /users/{u}/prods/{p} {\n      allow read, write: if request.auth != null && request.auth.uid == u;\n    }\n    match /users/{u}/projects/{p} {\n      allow read, write: if request.auth != null && request.auth.uid == u;\n      match /items/{i} {\n        allow read, write: if request.auth != null && request.auth.uid == u;\n      }\n    }\n  }\n}";
 var FRESH=200000;          /* una presenza più vecchia di così (nessun battito) non blocca più nulla */
 var HB_ON=75000,HB_OFF=240000,IDLE=180000;
 var LS=window.localStorage,_set=Storage.prototype.setItem;
@@ -5631,7 +5643,7 @@ function setPrev(code,k){prevMap[code]=k;jset('ciak-team-prev',prevMap)}
 function localAlive(k){try{var id=k.replace(/^ciak-(sw-p|project)-/,''),a=jget(/^ciak-sw-p-/.test(k)?'ciak-sw-index':'ciak-index-v2',[]);return LS.getItem(k)!=null&&a.some(function(m){return m.id===id})}catch(e){return false}}
 var links=jget('ciak-team-links',{});   /* chiave localStorage del progetto -> {code,kind,h} (h = impronta dell'ultimo stato sincronizzato) */
 var cfg=BUILTIN_CFG||jget('ciak-team-config',null);
-var db=null,uid=null,fb=null,ready=null,applying=false,sel=null,revealed=false,pendingCode='';
+var db=null,uid=null,fb=null,ready=null,applying=false,sel=null,revealed=false,pendingCode='',pendingProd='';
 var unsubs={},teams={},timers={},syncAt={},syncErr={},drafts={},beat=null,R={},pend={},byWho={},atKey={},applyT={},upgrading={},lastRev={},lastW={},presT={},lockSig={},needResync={},tick=null;
 var dragAt=0,composing=false,act=Date.now();
 var $=function(s){return document.querySelector(s)};
@@ -5640,7 +5652,7 @@ function h(t,a,k){var e=document.createElement(t),i;a=a||{};for(i in a){if(i==='
 var toastT=null;
 function toast(m){var t=$('#toast');if(t&&typeof t.textContent!=='undefined'){try{t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('on')},2600);return}catch(e){}}console.log('[Team]',m)}
 function hm(ts){return new Date(ts).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}
-function niceErr(e){var m=(e&&e.message)||String(e),c=e&&e.code;if(c==='permission-denied'||/permission/i.test(m))return 'Permesso negato: aggiorna le regole di Firestore (ora includono anche «items») e controlla che l’accesso «Anonimo» sia attivo.';if(c==='unavailable'||/offline|network/i.test(m))return 'Nessuna connessione: le modifiche restano sul dispositivo e partono appena torna la rete.';return m}
+function niceErr(e){var m=(e&&e.message)||String(e),c=e&&e.code;if(c==='permission-denied'||/permission/i.test(m))return 'Permesso negato: aggiorna le regole di Firestore (ora includono anche «items» e «productions») e controlla che l’accesso «Anonimo» sia attivo.';if(c==='unavailable'||/offline|network/i.test(m))return 'Nessuna connessione: le modifiche restano sul dispositivo e partono appena torna la rete.';return m}
 
 /* ---------- attività dell'utente: serve a non interrompere un trascinamento o una composizione di testo, e a sapere se sei attivo ---------- */
 ['keydown','pointerdown','pointermove','wheel','touchstart'].forEach(function(t){document.addEventListener(t,function(){act=Date.now()},true)});
@@ -5678,7 +5690,7 @@ function reveal(){
   if(revealed)return;revealed=true;
   $('#tmFab').hidden=false;$('#acBtn').hidden=false;place();acBtnUpdate();
   if(cfg)init().then(render).catch(function(){});else render();
-  if(pendingCode){sel=null;$('#tmPanel').classList.add('on');render()}
+  if(pendingCode){sel=null;$('#tmPanel').classList.add('on');render()}else if(pendingProd){openAccount(true)}
 }
 function watchSplash(){
   var s=document.getElementById('splash');
@@ -6217,7 +6229,7 @@ function aOn(u){
     if(!first){first=true;if(me.av&&!q.docs.some(function(x){return x.id===PROF}))aPushProfile();['sb','sw'].forEach(function(kind){jget(idxKey(kind),[]).forEach(function(m){var d=(kind==='sw'?'sw-':'sb-')+m.id;if(!(d in aDocs))aPush(aLocalKey(kind,m.id))})})}
     acct.state=aCount();render();
   },function(e){acct.state=aErr(e);render()});
-  render();
+  render();pdStart();
 }
 function aSignUp(u,p){
   u=aName(u);if(!aValid(u))return Promise.reject({message:'Il nome utente deve avere 3-24 caratteri: lettere, numeri, punto, trattino.'});
@@ -6232,9 +6244,162 @@ function aSignIn(u,p){
 function aSignOut(){
   if(!window.confirm('Uscire dall’account? I progetti restano su questo dispositivo ma smettono di sincronizzarsi.'))return;
   if(aUnsub){aUnsub();aUnsub=null}
-  acct.on=false;acct.u=null;acct.state='';try{LS.removeItem('ciak-acct')}catch(e){}
+  acd.cred=null;pdStop();acct.on=false;acct.u=null;acct.state='';try{LS.removeItem('ciak-acct')}catch(e){}
   fb.auth().signOut().then(function(){return fb.auth().signInAnonymously()}).then(function(c){uid=c.user.uid;render()}).catch(function(){render()});
   render();
+}
+/* ---------- PRODUZIONE: gruppo di persone con progetti condivisi (sceneggiatura, storyboard e produzione) ----------
+   productions/{codice} = {name, owner, members:{uid:profilo}, projects:{codiceTeam:{kind,title,by,byName}}}.
+   Condividere un progetto = creare (o riusare) il suo team e metterne il codice nell'elenco; chi è nel gruppo entra da solo in ogni team. */
+var prods={},pdUn=null,pdL={},pdJ=jget('ciak-prod-joined',{}),pdD={name:'',code:'',pick:{},open:{}},pdQ=Promise.resolve(),pdBusy={},pdSkip={},pdW={},pdErrT='',pdT=null,pdRules=false;
+function pdRef(c){return db.collection('productions').doc(c)}
+function pdMine(){return db.collection('users').doc(uid).collection('prods')}
+function pdMe(){return {name:me.name||acct.u||'Senza nome',role:me.role,g:me.g,av:me.av||'',u:acct.u||'',ts:Date.now()}}
+function pdName(){if(!me.name&&acct.u){me.name=acct.u;jset('ciak-team-me',me)}}
+function pdClean(c){return String(c||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'')}
+function pdE(e){var m=niceErr(e);if(e&&(e.code==='permission-denied'||/permission/i.test(e.message||'')))pdRules=true;pdErrT=m;toast(m);var x=$('#pdErr');if(x)x.textContent=m;render()}
+function pdInvite(c){if(!/^https?:$/.test(location.protocol))return '';var u=location.origin+location.pathname+'?prod='+c;if(cfg&&cfg!==BUILTIN_CFG){try{u+='&fb='+encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(cfg)))))}catch(e){}}return u}
+function pdStart(){
+  pdStop();if(!db||!uid||!acct.on)return;
+  pdUn=pdMine().onSnapshot(function(q){q.docChanges().forEach(function(ch){if(ch.type==='removed')pdDrop(ch.doc.id);else pdListen(ch.doc.id)})},pdE);
+  if(!pdT)pdT=setInterval(pdBeat,30000);
+}
+function pdStop(){if(pdUn){pdUn();pdUn=null}Object.keys(pdL).forEach(function(c){pdL[c]();delete pdL[c]});prods={}}
+function pdListen(c){
+  if(pdL[c]||!db)return;var first=true;
+  pdL[c]=pdRef(c).onSnapshot(function(s){
+    if(!s.exists){prods[c]={gone:true};render();return}
+    var d=s.data();prods[c]=d;
+    if(d.closed&&d.owner!==uid){pdMine().doc(c).delete().catch(function(){});toast('La produzione «'+(d.name||c)+'» è stata chiusa dal proprietario: le tue copie restano sul dispositivo.',6000);return}
+    if(first&&!d.closed){first=false;pdName();pdPres(c)}
+    pdSync(c,s.metadata.fromCache);render();
+  },pdE);
+}
+/* entra da solo nei progetti condivisi; se un progetto esce dall'elenco, smette di sincronizzarlo (la copia resta) */
+function pdSync(c,cache){
+  var P=prods[c].projects||{};
+  Object.keys(P).forEach(function(tc){
+    if(P[tc].by===uid||keyOf(tc)||pdBusy[tc]||pdSkip[tc])return;
+    pdBusy[tc]=1;
+    pdQ=pdQ.then(function(){return join(tc)}).then(function(){pdJ[tc]=c;jset('ciak-prod-joined',pdJ)},function(er){pdSkip[tc]=niceErr(er)}).then(function(){pdBusy[tc]=0;render()});
+  });
+  if(cache)return;
+  Object.keys(pdJ).forEach(function(tc){if(pdJ[tc]===c&&!P[tc]){pdLeave(tc);delete pdJ[tc];jset('ciak-prod-joined',pdJ)}});
+}
+function pdLeave(tc){var k=keyOf(tc),pc=(teams[tc]||{}).pair,pk=pc&&keyOf(pc);if(k)leave(k,true,true);if(pk)leave(pk,true,true)}
+function pdDrop(c){
+  if(pdL[c]){pdL[c]();delete pdL[c]}
+  Object.keys(pdJ).forEach(function(tc){if(pdJ[tc]===c){pdLeave(tc);delete pdJ[tc]}});jset('ciak-prod-joined',pdJ);
+  if(uid&&fb){var f={};f['members.'+uid]=fb.firestore.FieldValue.delete();pdRef(c).update(f).catch(function(){})}
+  delete prods[c];render();
+}
+function pdPres(c){pdW[c]=Date.now();var o={};o['members.'+uid]=pdMe();pdRef(c).update(o).catch(function(){})}
+function pdPresAll(){if(uid&&acct.on)Object.keys(pdL).forEach(function(c){if(prods[c]&&!prods[c].gone)pdPres(c)})}
+function pdBeat(){if(!uid||!acct.on||document.visibilityState==='hidden'||!active())return;Object.keys(pdL).forEach(function(c){if(prods[c]&&!prods[c].gone&&Date.now()-(pdW[c]||0)>80000)pdPres(c)})}
+function pdCreate(name){
+  name=String(name||'').trim().slice(0,60);if(!name)return Promise.reject(new Error('Scrivi il nome della produzione'));
+  pdName();var c=newCode();
+  return pdRef(c).get().then(function(s){
+    if(s.exists)return pdCreate(name);var m={};m[uid]=pdMe();
+    return pdRef(c).set({name:name,owner:uid,ownerName:who(),created:Date.now(),closed:false,members:m,projects:{}}).then(function(){return pdMine().doc(c).set({ts:Date.now()})}).then(function(){pdD.name='';pdD.open[c]=true;toast('Produzione creata. Codice: '+c)});
+  });
+}
+function pdJoin(code){
+  code=pdClean(code);if(code.length<4)return Promise.reject(new Error('Scrivi il codice della produzione'));
+  pdName();
+  return pdRef(code).get().then(function(s){if(!s.exists)throw new Error('Codice produzione non valido');if(s.data().closed)throw new Error('Questa produzione è stata chiusa');return pdMine().doc(code).set({ts:Date.now()})}).then(function(){pdD.code='';pendingProd='';pdD.open[code]=true;toast('Sei entrato nella produzione')});
+}
+function pdShareOne(c,p){
+  var pre=links[p.key]?(p.kind==='sw'?addPair(p.key).catch(function(){}):Promise.resolve()).then(function(){return links[p.key].code}):share(p.key,p.kind);
+  return pre.then(function(tc){return ref(tc).get().then(function(s){
+    var t=s.exists?s.data():{},o={};
+    o['projects.'+tc]={code:tc,kind:p.kind,pair:t.pair||null,title:String(t.title||''),by:uid,byName:who(),ts:Date.now()};
+    return pdRef(c).update(o);
+  })});
+}
+function pdShare(c,list){
+  if(!list.length)return;pdBusy['s'+c]=1;pdName();render();
+  list.reduce(function(pr,p){return pr.then(function(){return pdShareOne(c,p)})},Promise.resolve()).then(function(){list.forEach(function(p){delete pdD.pick[c+'|'+p.key]});toast(list.length===1?'Progetto condiviso con la produzione':list.length+' progetti condivisi con la produzione')}).catch(pdE).then(function(){pdBusy['s'+c]=0;render()});
+}
+function pdUnshare(c,tc){
+  var e=((prods[c]||{}).projects||{})[tc];if(!e)return;
+  if(!window.confirm('Togliere «'+(e.title||'questo progetto')+'» dalla produzione? Gli altri membri smettono di riceverlo (tengono la loro copia sul dispositivo).'))return;
+  var o={};o['projects.'+tc]=fb.firestore.FieldValue.delete();pdRef(c).update(o).catch(pdE);
+}
+function pdClose(c){
+  var d=prods[c]||{};if(d.owner!==uid)return;
+  if(!window.confirm('Chiudere la produzione «'+(d.name||c)+'» per tutti? Il gruppo si scioglie: i membri tengono una copia dei progetti sul dispositivo ma non li sincronizzano più.'))return;
+  pdRef(c).update({closed:true,closedAt:Date.now()}).then(function(){return pdMine().doc(c).delete()}).then(function(){toast('Produzione chiusa')}).catch(pdE);
+}
+function pdExit(c){
+  var d=prods[c]||{};if(!window.confirm('Uscire dalla produzione «'+(d.name||c)+'»? Le copie dei progetti restano sul dispositivo ma non si sincronizzano più.'))return;
+  pdMine().doc(c).delete().catch(pdE);
+}
+/* apre una parte di un progetto condiviso dall'elenco della home */
+function pdOpen(part,key){
+  var id=key.replace(/^ciak-(sw-p|project)-/,'');
+  openAccount(false);openPanel(false);
+  var sv=$('#viewSW');if(sv&&!sv.hidden){var sb=$('#swBack');if(sb)sb.click()}
+  var vh=$('#viewHome');if(vh&&vh.hidden){var bh=$('#btnHome');if(bh)bh.click()}
+  setTimeout(function(){
+    var t=$(part==='sw'?'#hubTSw':part==='pr'?'#hubTPr':'#hubTSb');if(t)t.click();
+    setTimeout(function(){var e=$(part==='sw'?'#swProjects [data-o="'+id+'"]':part==='pr'?'#edHubList [data-edo="'+id+'"]':'#projects [data-popen="'+id+'"]');if(e)e.click();else toast('Il progetto non è ancora disponibile: riprova tra un attimo')},90);
+  },90);
+}
+function pdChip(u,m){
+  var on=Date.now()-(m.ts||0)<300000||u===uid,au=avUrl(m.av);
+  var i=au?h('i',{style:'background-image:url("'+au+'")'}):h('i',{text:initials(m.name),style:'background:'+colorOf(u)});
+  return h('span',{'class':'mem'+(on?' on':''),title:on?'Attivo ora':'Ultima attività '+new Date(m.ts||0).toLocaleString('it-IT')},[i,document.createTextNode(m.name+' · '+roleLabel(m.role,m.g)+(u===uid?' (tu)':''))]);
+}
+function pdProj(c,d,tc,e){
+  var k=keyOf(tc),T=teams[tc]||{},pk=null,btns=[];
+  if(k){if(e.kind==='sw'){btns.push(['Sceneggiatura','sw',k]);pk=(T.pair&&keyOf(T.pair))||linkedSb(k)}else pk=k;if(pk){btns.push(['Storyboard','sb',pk]);btns.push(['Produzione','pr',pk])}}
+  var kind=e.kind==='sw'?((T.pair||e.pair)?'Progetto':'Sceneggiatura'):'Storyboard';
+  var st=k?(e.by===uid?'Condiviso da te':'Sincronizzato · di '+(e.byName||'un collega')):pdSkip[tc]?pdSkip[tc]:e.by===uid?'Condiviso da un altro tuo dispositivo':'In arrivo sul tuo dispositivo…';
+  var row=[h('div',{style:'font-weight:700',text:kind+' - '+(T.title||e.title||'Senza titolo')}),h('div',{'class':'kv'+(pdSkip[tc]&&!k?' bad':''),text:st})];
+  var acts=btns.map(function(b){return h('button',{'class':'tb sm',type:'button',text:b[0],onclick:function(){pdOpen(b[1],b[2])}})});
+  if(!k&&(pdSkip[tc]||e.by===uid))acts.push(h('button',{'class':'tb sm',type:'button',text:pdSkip[tc]?'Riprova':'Collega qui',onclick:function(){delete pdSkip[tc];if(e.by===uid){pdBusy[tc]=1;join(tc).then(function(){pdJ[tc]=c;jset('ciak-prod-joined',pdJ)}).catch(pdE).then(function(){pdBusy[tc]=0;render()})}else pdSync(c,false);render()}}));
+  if(e.by===uid||d.owner===uid)acts.push(h('button',{'class':'tb sm dg',type:'button',text:'Togli',onclick:function(){pdUnshare(c,tc)}}));
+  if(acts.length)row.push(h('div',{'class':'row'},acts));
+  return h('div',{'class':'pdj'},row);
+}
+function pdCard(c){
+  var d=prods[c];
+  if(d.gone)return h('div',{'class':'pdp'},[h('b',{text:'Produzione '+c}),h('div',{'class':'kv',text:'Non più disponibile.'}),h('button',{'class':'tb sm',type:'button',text:'Togli dall’elenco',onclick:function(){pdMine().doc(c).delete().catch(pdE)}})]);
+  var P=d.projects||{},M=d.members||{},own=d.owner===uid,op=pdD.open[c]!==false,lk=pdInvite(c);
+  var kids=[h('button',{'class':'tb',type:'button',style:'width:100%;text-align:left;font-weight:700',text:(op?'▾ ':'▸ ')+(d.name||c)+(own?' · tua':''),onclick:function(){pdD.open[c]=!op;render()}})];
+  if(!op)return h('div',{'class':'pdp'},kids);
+  var tcs=Object.keys(P).sort(function(a,b){return (P[b].ts||0)-(P[a].ts||0)}),us=Object.keys(M).sort(function(a,b){return (M[b].ts||0)-(M[a].ts||0)});
+  kids.push(h('div',{'class':'row'},[h('span',{'class':'code',text:c}),h('button',{'class':'tb sm',type:'button',text:'Copia codice',onclick:function(){copy(c,'Codice copiato')}}),lk?h('button',{'class':'tb sm',type:'button',text:'Copia link d’invito',onclick:function(){copy(lk,'Link copiato')}}):null]));
+  kids.push(h('div',{},us.map(function(u){return pdChip(u,M[u])})));
+  kids.push(h('h5',{'class':'pdh',text:'Progetti condivisi ('+tcs.length+')'}));
+  if(!tcs.length)kids.push(h('div',{'class':'msg',text:'Nessun progetto condiviso: sceglilo qui sotto.'}));
+  tcs.forEach(function(tc){kids.push(pdProj(c,d,tc,P[tc]))});
+  var cand=projectList().filter(function(p){var L=links[p.key];return !(L&&P[L.code])}),sh=[h('h5',{'class':'pdh',text:'Condividi i tuoi progetti'})];
+  if(!cand.length)sh.push(h('div',{'class':'msg',text:'Nessun altro progetto da condividere.'}));
+  else{
+    cand.forEach(function(p){var kk=c+'|'+p.key,cb=h('input',{type:'checkbox'});cb.checked=!!pdD.pick[kk];cb.onchange=function(){if(cb.checked)pdD.pick[kk]=1;else delete pdD.pick[kk];render()};sh.push(h('label',{'class':'pdk'},[cb,h('span',{text:p.label})]))});
+    var sel=cand.filter(function(p){return pdD.pick[c+'|'+p.key]}),a={'class':'tb p',type:'button',text:pdBusy['s'+c]?'Condivisione in corso…':sel.length?'Condividi '+sel.length+(sel.length===1?' progetto':' progetti'):'Scegli i progetti da condividere',onclick:function(){pdShare(c,sel)}};
+    if(!sel.length||pdBusy['s'+c])a.disabled='';
+    sh.push(h('button',a));
+    sh.push(h('div',{'class':'kv',text:'Chi è nella produzione riceve ogni progetto da solo e può modificarne sceneggiatura, storyboard e produzione.'}));
+  }
+  kids.push(h('div',{'class':'pd'},sh));
+  kids.push(own?h('button',{'class':'tb dg',type:'button',text:'Chiudi la produzione per tutti',onclick:function(){pdClose(c)}}):h('button',{'class':'tb',type:'button',text:'Esci dalla produzione',onclick:function(){pdExit(c)}}));
+  return h('div',{'class':'pdp'},kids);
+}
+function pdView(b){
+  var codes=Object.keys(prods).filter(function(c){return prods[c]}).sort(function(a,z){return String(prods[a].name||a).localeCompare(String(prods[z].name||z))});
+  var card=h('div',{'class':'card pd'},[h('h4',{text:'Produzione'}),h('p',{'class':'msg',text:'Crea un gruppo con altre persone e scegli quali progetti condividere: tutti i membri possono aprire e modificare sceneggiatura, storyboard e produzione.'})]);
+  codes.forEach(function(c){card.appendChild(pdCard(c))});
+  var nm=h('input',{id:'pdName',type:'text',placeholder:'Nome della produzione',maxlength:'60',autocomplete:'off',value:pdD.name}),cd=h('input',{id:'pdCode',type:'text',placeholder:'Codice produzione (es. K7M2QX)',maxlength:'8',autocapitalize:'characters',autocomplete:'off',value:pdD.code||pendingProd});
+  var mk=function(){pdCreate(nm.value).catch(pdE)},go=function(){pdJoin(cd.value).catch(pdE)};
+  nm.oninput=function(){pdD.name=nm.value};nm.onkeydown=function(e){if(e.key==='Enter')mk()};
+  cd.oninput=function(){pdD.code=cd.value;pendingProd=''};cd.onkeydown=function(e){if(e.key==='Enter')go()};
+  card.appendChild(h('div',{},[h('h5',{'class':'pdh',text:codes.length?'Un’altra produzione':'Crea la tua produzione'}),nm,h('button',{'class':'tb p',type:'button',text:'Crea produzione',onclick:mk}),
+    h('h5',{'class':'pdh',style:'margin-top:12px',text:'Entra con un codice'}),cd,h('button',{'class':'tb',type:'button',text:'Entra',onclick:go}),h('div',{id:'pdErr','class':'st bad',text:pdErrT})]));
+  if(pdRules)card.appendChild(h('div',{},[h('p',{'class':'warn',text:'Le produzioni richiedono le regole Firestore aggiornate: copiale e incollale in Firebase › Firestore Database › Regole › Pubblica.'}),h('button',{'class':'tb sm',type:'button',text:'Copia le regole',onclick:function(){copy(RULES,'Regole copiate')}})]));
+  b.appendChild(card);
 }
 /* ---------- avatar dell'account: 4 immagini (2 maschili, 2 femminili) ---------- */
 var AV_HS=['none','short','curly','long','bob','bun','pony'],AV_TS=['tee','vneck','collar','hoodie','tank'],AV_GL=['none','round','square','sun'],AV_HT=['none','cap','beanie','fedora'],AV_NK=['none','chain','pearls','pendant'],AV_BR=['none','full','goatee','mustache','stubble'];
@@ -6328,7 +6493,7 @@ var avT=null;
 function avCommit(){
   var pp=avPhotoOf(me.av);if(pp)jset('ciak-acct-photo',pp);   /* l'ultima foto resta disponibile anche se scegli un altro avatar */
   jset('ciak-team-me',me);render();
-  clearTimeout(avT);avT=setTimeout(function(){if(uid)Object.keys(links).forEach(function(k){writePresence(k)});aPushProfile()},900);   /* un solo invio ai colleghi dopo le ultime modifiche */
+  clearTimeout(avT);avT=setTimeout(function(){if(uid)Object.keys(links).forEach(function(k){writePresence(k)});aPushProfile();pdPresAll()},900);   /* un solo invio ai colleghi dopo le ultime modifiche */
 }
 function avCustom(){return (typeof me.av==='string'&&me.av.slice(0,2)==='c.')?avParse(me.av):null}
 function setAvatar(id){me.av=id;acd.edit=false;avCommit()}
@@ -6339,6 +6504,7 @@ function acBtnUpdate(){
   var w=Math.round(bt.getBoundingClientRect().width);document.documentElement.style.setProperty('--ac-w',bt.hidden||!w?'0px':(w+12)+'px');
 }
 /* scarica un file di testo con nome utente e password, così i dati non si perdono */
+function credsSave(u,p){Promise.resolve(downloadCreds(u,p)).then(function(ok){if(ok)acd.cred=null;else{acd.cred={u:u,p:p};render()}})}
 function downloadCreds(u,p){
   u=aName(u);
   if(!u||!p){toast('Scrivi prima nome utente e password');return false}
@@ -6349,12 +6515,21 @@ function downloadCreds(u,p){
         'Creato il: '+new Date().toLocaleString('it-IT')+'\r\n\r\n'+
         'Conserva questo file in un posto sicuro e non condividerlo: contiene la tua password in chiaro.\r\n'+
         'Senza email la password non si può recuperare: se la perdi, non potrai più accedere ai tuoi progetti nel cloud.\r\n';
-  try{
-    var bl=new Blob(['\ufeff'+t],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(bl),a=document.createElement('a');
-    a.href=url;a.download='ciak-account-'+u+'.txt';a.style.display='none';document.body.appendChild(a);a.click();
-    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url)},1500);
-    toast('File con le credenziali scaricato');return true;
-  }catch(e){toast('Download non riuscito');return false}
+  var name='ciak-account-'+u+'.txt',bl=new Blob(['\ufeff'+t],{type:'text/plain;charset=utf-8'}),file=null,mob=!!window.__ciakMob||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(window.matchMedia&&matchMedia('(hover:none) and (pointer:coarse)').matches);
+  try{file=new File([bl],name,{type:'text/plain'})}catch(e){}
+  function done(){toast('Credenziali salvate');return true}
+  function stop(e){return e&&e.name==='AbortError'}
+  function plain(){
+    try{var url=URL.createObjectURL(bl),a=document.createElement('a');a.href=url;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();
+      setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url)},1500);toast('File scaricato nella cartella Download');return true}
+    catch(e){toast('Salvataggio non riuscito');return false}
+  }
+  /* telefono: foglio di condivisione di sistema (File, Drive, iCloud…); computer: finestra «Salva con nome». Se il browser non li ha, scarica. */
+  function share(){return navigator.share({files:[file],title:'Credenziali CIAK'}).then(done)}
+  function pick(){return window.showSaveFilePicker({suggestedName:name,types:[{description:'File di testo',accept:{'text/plain':['.txt']}}]}).then(function(f){return f.createWritable().then(function(w){return w.write(bl).then(function(){return w.close()})})}).then(done)}
+  var canShare=!!(file&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})),canPick=!!window.showSaveFilePicker,first=mob?(canShare?share:canPick?pick:null):(canPick?pick:canShare?share:null);
+  if(!first)return Promise.resolve(plain());
+  return first().catch(function(e){if(stop(e)){toast('Salvataggio annullato');return false}return plain()});
 }
 var EYE_ON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 var EYE_OFF='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>';
@@ -6466,6 +6641,9 @@ function acctView(b){
       h('div',{'class':'row',style:'margin-top:8px;gap:6px'},[
         h('button',{'class':'tb',type:'button',text:'Sincronizza ora',onclick:function(){['sb','sw'].forEach(function(kind){jget(idxKey(kind),[]).forEach(function(m){aPush(aLocalKey(kind,m.id))})})}}),
         h('button',{'class':'tb',type:'button',text:'Esci',onclick:aSignOut})])]));
+    if(acd.cred)b.appendChild(h('div',{'class':'card'},[h('h4',{text:'Salva le credenziali'}),h('p',{'class':'msg',text:'Il file con nome utente e password non è stato salvato. Scegli dove metterlo (File, Drive, e-mail a te stesso…): senza email la password non si recupera.'}),
+      h('div',{'class':'row'},[h('button',{'class':'tb p',type:'button',text:'Salva il file…',onclick:function(){credsSave(acd.cred.u,acd.cred.p)}}),h('button',{'class':'tb',type:'button',text:'Non serve',onclick:function(){acd.cred=null;render()}})])]));
+    pdView(b);
     b.appendChild(avPicker());
     return;
   }
@@ -6478,18 +6656,19 @@ function acctView(b){
     var t=acd.show?'Nascondi la password':'Mostra la password';eye.setAttribute('aria-label',t);eye.title=t;eye.setAttribute('aria-pressed',acd.show?'true':'false');pw.focus();
   }});
   eye.innerHTML=acd.show?EYE_OFF:EYE_ON;
-  function run(f,dl){if(acct.busy)return;msg.textContent='';acct.busy=true;var u=un.value,p=pw.value;f(u,p).then(function(){acct.busy=false;if(dl)downloadCreds(u,p);acd.p='';acd.show=false;render()},function(e){acct.busy=false;msg.textContent=aErr(e)})}
+  function run(f,dl){if(acct.busy)return;msg.textContent='';acct.busy=true;var u=un.value,p=pw.value;f(u,p).then(function(){acct.busy=false;if(dl)credsSave(u,p);acd.p='';acd.show=false;render()},function(e){acct.busy=false;msg.textContent=aErr(e)})}
   pw.onkeydown=function(e){if(e.key==='Enter')run(aSignIn,false)};
   var dlc=h('input',{id:'tmADl',type:'checkbox'});dlc.checked=acd.dl!==false;dlc.onchange=function(){acd.dl=dlc.checked};
   b.appendChild(h('div',{'class':'card'},[h('h4',{text:'Account (facoltativo)'}),
     h('p',{'class':'msg',text:'Solo nome utente e password, nessuna email: i tuoi progetti e il tuo avatar si salvano nel cloud e li ritrovi da qualsiasi dispositivo. Attenzione: senza email la password non si può recuperare.'}),
     un,h('div',{'class':'pw'},[pw,eye]),
-    h('label',{style:'display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:4px 0 8px'},[dlc,h('span',{text:'Scarica un file con nome utente e password quando creo il profilo (consigliato, per non perdere i dati)'})]),
+    h('label',{style:'display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:4px 0 8px'},[dlc,h('span',{text:'Salva un file con nome utente e password quando creo il profilo, scegliendo dove (consigliato, per non perdere i dati)'})]),
     h('div',{'class':'row',style:'gap:6px'},[
       h('button',{'class':'tb p',type:'button',text:'Accedi',onclick:function(){run(aSignIn,false)}}),
       h('button',{'class':'tb',type:'button',text:'Crea profilo',onclick:function(){run(aSignUp,dlc.checked)}}),
-      h('button',{'class':'tb',type:'button',text:'Scarica credenziali',title:'Salva ora un file con nome utente e password scritti qui sopra',onclick:function(){downloadCreds(un.value,pw.value)}})]),
+      h('button',{'class':'tb',type:'button',text:'Salva credenziali',title:'Salva ora un file con nome utente e password scritti qui sopra',onclick:function(){downloadCreds(un.value,pw.value)}})]),
     h('p',{'class':'warn',style:'margin-top:8px',text:'Il file contiene la password in chiaro: tienilo in un posto sicuro.'}),msg]));
+  b.appendChild(h('div',{'class':'card'},[h('h4',{text:'Produzione'}),h('p',{'class':'msg',text:'Accedi o crea un profilo per creare una produzione, o per entrare in quella di un gruppo, e lavorare insieme su sceneggiatura, storyboard e produzione.'+(pendingProd?' Hai un invito: codice '+pendingProd+'.':'')})]));
 }
 function acRender(){
   var b=$('#acBody');if(!b)return;
@@ -6502,7 +6681,7 @@ function acRender(){
 function openAccount(on){
   var p=$('#acPanel');if(on)openPanel(false);p.classList.toggle('on',on);$('#acBtn').setAttribute('aria-expanded',on?'true':'false');acRender();
 }
-function saveMe(){jset('ciak-team-me',me);if(uid)Object.keys(links).forEach(function(k){writePresence(k)});render()}
+function saveMe(){jset('ciak-team-me',me);if(uid)Object.keys(links).forEach(function(k){writePresence(k)});pdPresAll();render()}
 function copy(txt,msg){
   var ok=function(){toast(msg)},ko=function(){window.prompt('Copia da qui:',txt)};
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,ko);else ko();
@@ -6608,9 +6787,9 @@ window.addEventListener('offline',render);
 
 /* invito via link: ?team=CODICE apre il pannello con il codice già scritto; &fb=… porta la configurazione pubblica di Firebase */
 try{
-  var u=new URL(location.href),tc=u.searchParams.get('team'),fc=u.searchParams.get('fb');
+  var u=new URL(location.href),tc=u.searchParams.get('team'),fc=u.searchParams.get('fb'),pc=u.searchParams.get('prod');
   if(fc&&!cfg){try{var c0=JSON.parse(decodeURIComponent(escape(atob(fc))));if(c0&&c0.apiKey&&c0.projectId&&c0.appId){cfg=c0;jset('ciak-team-config',c0)}}catch(e){}}
-  if(tc||fc){if(tc)pendingCode=tc.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);u.searchParams.delete('team');u.searchParams.delete('fb');history.replaceState(null,'',u.pathname+(u.search||'')+u.hash)}
+  if(tc||fc||pc){if(pc){pendingProd=pdClean(pc).slice(0,8);u.searchParams.delete('prod')}if(tc)pendingCode=tc.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);u.searchParams.delete('team');u.searchParams.delete('fb');history.replaceState(null,'',u.pathname+(u.search||'')+u.hash)}
 }catch(e){}
 watchSplash();watchDom();
 /* solo per i test automatici */
