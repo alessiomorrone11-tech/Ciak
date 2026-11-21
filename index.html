@@ -1046,7 +1046,7 @@ function mk(type,o){
   Object.keys(o||{}).forEach(function(k){r[k]=o[k]});
   r.gid=String(r.gid||'');r.glock=!!r.glock&&!!r.gid;
   if(type==='subject'){
-    r.sex=r.sex==='f'?'f':'m';r.post=['stand','sit','lie'].indexOf(r.post)>=0?r.post:(num(r.h,1.75)<1.45?'sit':'stand');r.hair=['short','long','bun','bald'].indexOf(r.hair)>=0?r.hair:'short';
+    r.sex=r.sex==='f'?'f':'m';r.dress=r.sex==='f'&&!!r.dress;r.post=['stand','sit','lie'].indexOf(r.post)>=0?r.post:(num(r.h,1.75)<1.45?'sit':'stand');r.hair=['short','long','bun','bald'].indexOf(r.hair)>=0?r.hair:'short';
     ['skin','hairc','top','bot'].forEach(function(k){r[k]=/^#[0-9a-f]{6}$/i.test(r[k]||'')?String(r[k]).toLowerCase():d[k]});
   }
   if(type==='camera'){r.tilt=clamp(num(r.tilt,0),-90,90);r.shake=clamp(num(r.shake,40),0,100)}
@@ -1718,9 +1718,11 @@ function drawFig(e,cam,PR,L){
   /* proporzioni: uomo spalle larghe e vita dritta, donna spalle strette, vita sottile, fianchi e seno */
   /* tronco continuo dal cavallo alle spalle: profilo liscio (cosce, fianchi, vita, petto); sotto la linea dei fianchi ha il colore dei pantaloni */
   var PRF=f?[[.425,.001],[.44,.105],[.47,.16],[.52,.178],[.6,.145],[.7,.165],[.79,.18],[.82,.165],[.855,.075],[.86,.001]]:[[.425,.001],[.44,.11],[.47,.16],[.52,.172],[.6,.158],[.7,.19],[.79,.215],[.82,.2],[.855,.09],[.86,.001]];
+  var dress=f&&!!e.dress&&!seated&&!lie;
+  if(dress)PRF=[[.35,.33],[.44,.27],[.52,.2]].concat(PRF.slice(4));
   function crw(x){var n=PRF.length,i=0;if(x>=PRF[n-1][0])return PRF[n-1][1];while(i<n-2&&x>=PRF[i+1][0])i++;var A=PRF[i],B=PRF[i+1],p0=PRF[Math.max(0,i-1)][1],p3=PRF[Math.min(n-1,i+2)][1],t=(x-A[0])/(B[0]-A[0]),w1=A[1],w2=B[1];return Math.max(0.001,0.5*(2*w1+(-p0+w2)*t+(2*p0-5*w1+4*w2-p3)*t*t+(-p0+3*w1-3*w2+p3)*t*t*t))}
   function mkR(yy){var w=crw(yy);return {y:yy,w:w,d:w*(f?0.6:0.62),fr:(f&&yy>0.67&&yy<0.78)?1.15:1,br:1}}
-  var rings=[],yy;for(yy=0.86;yy>0.43;yy-=0.03)rings.push(mkR(yy));rings.push(mkR(0.425));
+  var rings=[],yy,yb=dress?0.35:0.425;for(yy=0.86;yy>yb+0.005;yy-=0.03)rings.push(mkR(yy));rings.push(mkR(yb));
   var hw=(f?0.082:0.09)*u,sw=(f?0.172:0.205)*u,tdW=f?[0.144,0.104,0.1,0.076]:[0.17,0.124,0.115,0.09];
   /* gambe */
   for(i=-1;i<=1;i+=2){
@@ -1728,7 +1730,7 @@ function drawFig(e,cam,PR,L){
     var hp=P(0,s,hipZ),kn,ft,toe;
     if(seated){kn=P(0.42*u,s,hipZ-0.02);ft=P(0.42*u,s*0.9,0.05);toe=P(0.56*u,s*0.9,0.04)}
     else{kn=P(0.015*u,s*0.95,hipZ*0.5);ft=P(0,s*0.9,0.05);toe=P(0.14*u,s*0.9,0.045)}
-    o+=limb(hp,kn,cb,tdW[0]*u,tdW[1]*u)+limb(kn,ft,cb,tdW[2]*u,tdW[3]*u)+limb(ft,toe,shadeC(cb,0.7),0.1*u,0.085*u);
+    var lc=dress?cs:cb;o+=limb(hp,kn,lc,tdW[0]*u,tdW[1]*u)+limb(kn,ft,lc,tdW[2]*u,tdW[3]*u)+limb(ft,toe,dress?shadeC(ct,0.45):shadeC(cb,0.7),0.1*u,0.085*u);
   }
   /* braccia: quelle dietro al busto vanno disegnate prima */
   var tdep=P(0,0,shZ)[2],armB='',armF='',aw=f?[0.085,0.065,0.052]:[0.125,0.095,0.07];
@@ -1748,7 +1750,7 @@ function drawFig(e,cam,PR,L){
       rr=rings[j+1];
       nx=fx*Math.sin(tm)/(rr.d*u)+rx*Math.cos(tm)/(rr.w*u);ny=fy*Math.sin(tm)/(rr.d*u)+ry*Math.cos(tm)/(rr.w*u);nl=Math.hypot(nx,ny)||1;nx/=nl;ny/=nl;
       var nzl=Math.sin(tm)/(rr.d*u),dc=nx*tcx+ny*tcy;nzl/=(Math.hypot(nzl,Math.cos(tm)/(rr.w*u))||1);if(!lie&&dc<-0.3)continue;
-      faces.push({nzl:nzl,b:(rings[j].y+rr.y)/2<0.55,dc:dc+j*0.001,m:clamp(0.8+0.35*Math.max(0,nx*Lx+ny*Ly)+0.1*Math.max(0,dc),0.74,1.15),p:[RP(rings[j],t),RP(rings[j],t2),RP(rr,t2),RP(rr,t)]});
+      faces.push({nzl:nzl,b:!dress&&(rings[j].y+rr.y)/2<0.55,dc:dc+j*0.001,m:clamp(0.8+0.35*Math.max(0,nx*Lx+ny*Ly)+0.1*Math.max(0,dc),0.74,1.15),p:[RP(rings[j],t),RP(rings[j],t2),RP(rr,t2),RP(rr,t)]});
     }
   }
   function poly(pts,col){var st=pts.map(function(q){return q[0].toFixed(1)+','+q[1].toFixed(1)}).join(' ');return '<polygon points="'+st+'" fill="'+col+'" stroke="'+col+'" stroke-width="0.8" stroke-linejoin="round"/>'}
@@ -1756,6 +1758,8 @@ function drawFig(e,cam,PR,L){
   if(lie)faces.forEach(function(fc){fc.dc=-(fc.p[0][2]+fc.p[1][2]+fc.p[2][2]+fc.p[3][2])/4;fc.m=clamp(0.8+0.3*fc.nzl,0.74,1.15)});
   faces.sort(function(A,B){return A.dc-B.dc});
   faces.forEach(function(fc){o+=poly(fc.p,shadeC(fc.b?cb:ct,fc.m))});
+  /* seno (donna): due sfere sul petto, visibili solo se rivolta verso la camera */
+  if(f&&!lie&&fx*tcx+fy*tcy>-0.15)[-1,1].forEach(function(sd){o+=ball(P(0.085*u,sd*0.07*u,0.745*h),0.056*u,ct)});
   /* collo */
   o+=limb(P(0,0,shZ),P(0,0,0.9*h),cs,(f?0.085:0.13)*u,(f?0.075:0.11)*u);
   o+=armF;
@@ -2500,6 +2504,7 @@ function renderInspector(){
     h+=frow('Azione / posa',tin('pose',e.pose));
     h+=frow('Altezza (m)',nin('h',e.h,0.3,2.4,0.05));
     h+=frow('Sesso',seg('sex',e.sex,[['m','Uomo'],['f','Donna']]));
+    if(e.sex==='f')h+=frow('Abito',seg('dress',e.dress?'1':'0',[['0','No'],['1','Sì']]));
     h+=frow('Posizione',seg('post',e.post||(e.h<1.45?'sit':'stand'),[['stand','In piedi'],['sit','Seduta'],['lie','Sdraiata']]));
     h+=frow('Capelli',seg('hair',e.hair,[['short','Corti'],['long','Lunghi'],['bun','Raccolti'],['bald','Calvo']]));
     h+='<div class="f"><span>Colori</span><div style="display:flex;gap:10px;flex-wrap:wrap">'+[['skin','Pelle'],['hairc','Capelli'],['top','Busto'],['bot','Gambe']].map(function(c){return '<label style="display:flex;flex-direction:column;align-items:center;font-size:11px;color:var(--muted);gap:2px"><input type="color" class="cpick" data-k="'+c[0]+'" value="'+e[c[0]]+'">'+c[1]+'</label>'}).join('')+'</div></div>';
@@ -2674,6 +2679,7 @@ insp.addEventListener('click',function(ev){
   if(a==='mode')e.mode=v;
   if(a==='sex'&&e.type==='subject'){e.sex=v==='f'?'f':'m'}
   if(a==='hair'&&e.type==='subject')e.hair=v;
+  if(a==='dress'&&e.type==='subject')e.dress=e.sex==='f'&&v==='1';
   if(a==='post'&&e.type==='subject'){e.post=v;e.h=v==='sit'?1.25:(e.h<1.45?1.7:e.h)}
   if(a==='angle'){
     if(v==='level')e.tilt=0;
@@ -5833,6 +5839,7 @@ function listen(k){
   var code=L.code;R[code]=R[code]||{meta:null,order:null,items:{},removed:[]};
   var u1=ref(code).onSnapshot(function(s){
     if(!s.exists)return;var d=s.data();teams[code]=d;
+    if(d.closed&&d.owner!==uid){setTimeout(function(){if(links[k])closedByOwner(k,d)},0);return}
     if(d.fmt!==2){legacy(code,d);return}
     if(d.mby!==uid){R[code].meta=d.meta||null;R[code].order=Array.isArray(d.order)?d.order:null}
     render();decorateSoon();if(d.rev!==lastRev[code]){lastRev[code]=d.rev;soonApply(k)}
@@ -5924,6 +5931,7 @@ function join(code,again){
   code=(code||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');if(code.length<4)throw new Error('Scrivi il codice del team');
   return ref(code).get().then(function(s){
     if(!s.exists)throw new Error('Codice non valido');
+    if(s.data().closed)throw new Error('Questo progetto è stato chiuso dal proprietario');
     var d=s.data(),k=Object.keys(links).filter(function(x){return links[x].code===code})[0];
     if(k)return ref(code).set(memberPatch(k),{merge:true}).then(function(){listen(k);sel=code;render();toast('Sei già in questo team');return joinPair(k,d.pair)});
     if(d.fmt!==2){
@@ -5945,6 +5953,24 @@ function join(code,again){
       return ref(code).set(memberPatch(k),{merge:true}).then(function(){listen(k);sel=code;refreshHome();render();return joinPair(k,d.pair)}).then(function(){refreshHome();render();toast(d.pair?'Sei entrato nel progetto: sceneggiatura e storyboard sono nell’elenco':'Sei entrato nel team: il progetto è nell’elenco')});
     });
   });
+}
+/* chiusura del progetto: il proprietario lo chiude e si chiude per tutti i colleghi (restano con la loro copia, ma non sincronizzata) */
+function closedByOwner(k,d){
+  var t=d.title||'il progetto';
+  leave(k,true);
+  if(d.pair){var pk=keyOf(d.pair);if(pk)leave(pk,true)}
+  render();toast('Il proprietario ha chiuso «'+t+'»: non è più condiviso. La tua copia resta sul dispositivo.',6000);
+}
+function closeProject(key){
+  var L=links[key];if(!L)return;
+  var d=teams[L.code]||{};
+  if(d.owner!==uid){toast('Solo chi ha creato il progetto può chiuderlo');return}
+  if(!window.confirm('Chiudere «'+(d.title||'questo progetto')+'» per tutti? Il team si scioglie: i colleghi tengono una copia sul dispositivo ma non riceveranno più nulla, e il codice non funzionerà più.'))return;
+  try{push(key)}catch(e){}
+  var codes=[L.code],pk=d.pair&&keyOf(d.pair);if(d.pair)codes.push(d.pair);
+  Promise.all(codes.map(function(c){return ref(c).set({closed:true,closedAt:Date.now()},{merge:true})})).then(function(){
+    leave(key,true);if(pk)leave(pk,true);render();toast('Progetto chiuso per tutti');
+  }).catch(err);
 }
 function leave(key,sub){
   var L=links[key];if(!L)return;
@@ -6036,6 +6062,7 @@ function render(){
       h('div',{'class':'st'+(syncErr[L.code]?' bad':''),text:statusTxt(L.code)+(byWho[L.code]&&!syncErr[L.code]?' · ultima modifica: '+byWho[L.code]:'')}),
       mine?h('div',{'class':'here',text:'Stai lavorando su: '+mine.label}):null,
       h('div',{},uids.map(function(u){return memberChip(u,mem[u])})),
+      d.owner===uid?h('button',{'class':'tb',type:'button',text:'Chiudi il progetto per tutti',style:'margin-top:8px;display:block',onclick:function(){closeProject(k)}}):null,
       h('button',{'class':'tb',type:'button',text:'Smetti di sincronizzare',style:'margin-top:8px',onclick:function(){leave(k)}})]);
     b.appendChild(card);
   });
