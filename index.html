@@ -5736,6 +5736,8 @@ function uiTick(){
     var ls=JSON.stringify(there(L.code,w?w.id:'-'));
     if(ls!==lockSig[k]){lockSig[k]=ls;decorateSoon()}
   });
+  /* sceneggiatura condivisa: lo storyboard collegato entra sempre nello stesso progetto */
+  Object.keys(links).forEach(function(k){var L=links[k];if(L.kind==='sw'&&teams[L.code]&&!teams[L.code].pair&&teams[L.code].owner===uid)addPair(k).catch(function(){})});
   /* un progetto non più aperto non occupa nulla: rilascio la posizione */
   Object.keys(links).forEach(function(k){if(!open[k]&&atKey[k])setAt(k,null)});
 }
@@ -5853,7 +5855,7 @@ function touchIndex(k,d){try{var kind=links[k].kind,a=jget(idxKey(kind),[]),id=k
 /* ---------- condividi / unisciti / esci ---------- */
 function projectList(){
   var o=[];jget('ciak-index-v2',[]).forEach(function(m){if(m.link)return;o.push({key:'ciak-project-'+m.id,kind:'sb',label:'Storyboard · '+(m.title||'Senza titolo')})});
-  jget('ciak-sw-index',[]).forEach(function(m){o.push({key:'ciak-sw-p-'+m.id,kind:'sw',label:(linkedSb('ciak-sw-p-'+m.id)?'Progetto (sceneggiatura + storyboard) · ':'Sceneggiatura · ')+(m.title||'Senza titolo')})});
+  jget('ciak-sw-index',[]).forEach(function(m){o.push({key:'ciak-sw-p-'+m.id,kind:'sw',label:(linkedSb('ciak-sw-p-'+m.id)?'Progetto - ':'Sceneggiatura - ')+(m.title||'Senza titolo')})});
   return o;
 }
 function newCode(){var c='',a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',i;for(i=0;i<6;i++)c+=a[Math.floor(Math.random()*a.length)];return c}
@@ -5876,6 +5878,7 @@ function linkedSb(swKey){
   return m&&LS.getItem('ciak-project-'+m.id)?'ciak-project-'+m.id:null;
 }
 function share(key,kind){
+  if(kind==='sw'&&!linkedSb(key)){try{if(window.__ciakSw&&window.__ciakSw.resync)window.__ciakSw.resync()}catch(e){}}
   var sb=kind==='sw'?linkedSb(key):null;
   if(!sb||links[sb])return shareOne(key,kind);
   return shareOne(sb,'sb',{},true).then(function(c2){
@@ -5886,11 +5889,13 @@ function share(key,kind){
   });
 }
 /* sceneggiatura già condivisa: aggiunge lo storyboard collegato (nato dopo, o non ancora condiviso) */
+var pairing={};
 function addPair(swKey){
-  var L=links[swKey],sb=linkedSb(swKey);if(!L||!sb||links[sb])return Promise.resolve();
+  var L=links[swKey],sb=linkedSb(swKey);if(!L||!sb||links[sb]||pairing[swKey]||!db||!uid)return Promise.resolve();
+  pairing[swKey]=1;
   return shareOne(sb,'sb',{pairOf:L.code},true).then(function(c2){
-    return ref(L.code).set({pair:c2},{merge:true}).then(function(){toast('Storyboard collegato aggiunto al progetto')});
-  });
+    return ref(L.code).set({pair:c2},{merge:true}).then(function(){pairing[swKey]=0;toast('Storyboard collegato aggiunto al progetto')});
+  }).catch(function(e){pairing[swKey]=0;throw e});
 }
 /* chi entra nel progetto riceve anche lo storyboard, agganciato alla propria copia della sceneggiatura */
 function joinPair(swKey,code2){
@@ -6023,7 +6028,7 @@ function render(){
     var hasPair=L.kind==='sw'&&d.pair&&keyOf(d.pair),canPair=L.kind==='sw'&&!hasPair&&linkedSb(k);
     var lk=inviteLink(L.code),mine=atKey[k];
     var uids=Object.keys(mem).sort(function(a,c){return (mem[c].ts||0)-(mem[a].ts||0)});
-    var title=h('div',{style:'flex:1;font-weight:700'},[document.createTextNode((L.kind==='sw'?(hasPair?'Progetto · ':'Sceneggiatura · '):'Storyboard · ')+(d.title||'Senza titolo')+(hasPair?' (sceneggiatura + storyboard)':''))]);
+    var title=h('div',{style:'flex:1;font-weight:700'},[document.createTextNode((L.kind==='sw'?(hasPair?'Progetto - ':'Sceneggiatura - '):'Storyboard - ')+(d.title||'Senza titolo'))]);
 
     var card=h('div',{'class':'card'},[
       h('div',{'class':'row'},[title]),
@@ -6031,7 +6036,6 @@ function render(){
       h('div',{'class':'st'+(syncErr[L.code]?' bad':''),text:statusTxt(L.code)+(byWho[L.code]&&!syncErr[L.code]?' · ultima modifica: '+byWho[L.code]:'')}),
       mine?h('div',{'class':'here',text:'Stai lavorando su: '+mine.label}):null,
       h('div',{},uids.map(function(u){return memberChip(u,mem[u])})),
-      canPair?h('button',{'class':'tb',type:'button',text:'Condividi anche lo storyboard collegato',style:'margin-top:8px;display:block',onclick:function(){addPair(k).catch(err)}}):null,
       h('button',{'class':'tb',type:'button',text:'Smetti di sincronizzare',style:'margin-top:8px',onclick:function(){leave(k)}})]);
     b.appendChild(card);
   });
