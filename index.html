@@ -1729,16 +1729,17 @@ function drawFig(e,cam,PR,L){
     s=hw*i;
     var hp=P(0,s,hipZ),kn,ft,toe;
     if(seated){kn=P(0.42*u,s,hipZ-0.02);ft=P(0.42*u,s*0.9,0.05);toe=P(0.56*u,s*0.9,0.04)}
-    else{kn=P(0.015*u,s*0.95,hipZ*0.5);ft=P(0,s*0.9,0.05);toe=P(0.14*u,s*0.9,0.045)}
-    var lc=dress?cs:cb;o+=limb(hp,kn,lc,tdW[0]*u,tdW[1]*u)+limb(kn,ft,lc,tdW[2]*u,tdW[3]*u)+limb(ft,toe,dress?shadeC(ct,0.45):shadeC(cb,0.7),0.1*u,0.085*u);
+    else{kn=P(0.01*u,s*0.95,0.28*h);ft=P(0,s*0.9,0.04*h);toe=P(0.165*u,s*0.9,0.03*h)}
+    var lc=dress?cs:cb,heel=seated?P(0.40*u,s*0.9,0.04):P(-0.025*u,s*0.9,0.03*h);if(seated)toe=P(0.58*u,s*0.9,0.04);
+    o+=limb(hp,kn,lc,tdW[0]*u,tdW[1]*u)+ball(kn,tdW[1]/2*u,lc)+limb(kn,ft,lc,tdW[2]*u,tdW[3]*u)+limb(heel,toe,tint(f?'#2a2a30':'#1b1e23',L,1),0.09*u,0.075*u);
   }
   /* braccia: quelle dietro al busto vanno disegnate prima */
-  var tdep=P(0,0,shZ)[2],armB='',armF='',aw=f?[0.085,0.065,0.052]:[0.125,0.095,0.07];
+  var tdep=P(0,0,shZ)[2],armB='',armF='',aw=f?[0.089,0.073,0.071,0.054]:[0.118,0.098,0.095,0.072],ls=f?cs:ct;
   for(i=-1;i<=1;i+=2){
-    s=sw*i;var sh=P(0,s,shZ-0.04),el,hn,ao;
+    s=sw*i;var sh=P(0,s,0.8*h),el,hn,ao;
     if(seated){el=P(0.04,s+0.05*i*u,shZ-0.3*u);hn=P(0.34*u,s*0.7,hipZ+0.26*u)}
-    else{el=P(0.02,s+0.05*i*u,shZ-0.3*u);hn=P(0.06,s+0.08*i*u,shZ-0.6*u)}
-    ao=limb(sh,el,ct,aw[0]*u,aw[1]*u)+limb(el,hn,cs,aw[1]*0.95*u,aw[2]*u)+ball(hn,(f?0.04:0.052)*u,cs)+ball(sh,(f?0.058:0.082)*u,ct);
+    else{el=P(-0.01*u,s+0.05*i*u,0.6*h);hn=P(0.04*u,s+0.09*i*u,0.42*h)}
+    ao=limb(sh,el,ct,aw[0]*u,aw[1]*u)+ball(el,aw[1]/2*u,ls)+limb(el,hn,ls,aw[2]*u,aw[3]*u)+ball(hn,0.043*u,cs)+ball(sh,(f?0.054:0.072)*u,ct);
     if(sh[2]>tdep+0.02)armB+=ao;else armF+=ao;
   }
   o+=armB;
@@ -1761,10 +1762,10 @@ function drawFig(e,cam,PR,L){
   /* seno (donna): due sfere sul petto, visibili solo se rivolta verso la camera */
   if(f&&!lie&&fx*tcx+fy*tcy>-0.15)[-1,1].forEach(function(sd){o+=ball(P(0.085*u,sd*0.07*u,0.745*h),0.056*u,ct)});
   /* collo */
-  o+=limb(P(0,0,shZ),P(0,0,0.9*h),cs,(f?0.085:0.13)*u,(f?0.075:0.11)*u);
+  o+=limb(P(0,0,0.835*h),P(0,0,0.9*h),cs,(f?0.08:0.116)*u,(f?0.072:0.104)*u);
   o+=armF;
   /* testa: sfera con volto che segue l'orientamento */
-  var hd=P(0,0,0.93*h),fw=P(0.1,0,0.93*h),r=Math.max(1.5,(f?0.108:0.118)*u*hd[3]),R=r*1.06,hx=hd[0],hy=hd[1];
+  var hd=P(0,0,0.935*h),fw=P(0.1,0,0.935*h),r=Math.max(1.5,(f?0.102:0.11)*u*hd[3]),R=r*1.06,hx=hd[0],hy=hd[1];
   var m10=0.1*hd[3],fvx=(fw[0]-hx)/m10,fvy=(fw[1]-hy)/m10,c=clamp((hd[2]-fw[2])/0.1,-1,1);
   var q=clamp(0.3+c*1.1,0,1),gid='fg'+(++_figN);
   function grad(id,col){return '<radialGradient id="'+id+'" cx=".38" cy=".3" r=".8"><stop offset="0" stop-color="'+shadeC(col,1.1)+'"/><stop offset=".6" stop-color="'+col+'"/><stop offset="1" stop-color="'+shadeC(col,0.85)+'"/></radialGradient>'}
@@ -1777,7 +1778,8 @@ function drawFig(e,cam,PR,L){
     var fl=Math.hypot(fvx,fvy),ang=Math.atan2(fvy,fvx)*180/Math.PI,fcx=hx+fvx*r*0.62,fcy=hy+fvy*r*0.62+r*0.2*Math.max(0,c);
     o+='<g clip-path="url(#'+gid+'c)"><ellipse cx="'+fcx.toFixed(1)+'" cy="'+fcy.toFixed(1)+'" rx="'+(r*0.85*q).toFixed(1)+'" ry="'+(r*0.85).toFixed(1)+'" transform="rotate('+(fl>0.05?ang:0).toFixed(1)+' '+fcx.toFixed(1)+' '+fcy.toFixed(1)+')" fill="url(#'+gid+'s)"/></g>';
   }
-  [-1,1].forEach(function(sd){var ep=P(0.1*u*0.93,sd*0.045*u,0.928*h);if(ep[2]<hd[2]-0.004*u)o+='<circle cx="'+ep[0].toFixed(1)+'" cy="'+ep[1].toFixed(1)+'" r="'+Math.max(0.8,r*0.09).toFixed(1)+'" fill="#1b1512" fill-opacity=".85"/>'});
+  [-1,1].forEach(function(sd){var ep=P((f?0.088:0.095)*u,sd*0.036*u,0.94*h);if(ep[2]<hd[2]-0.004*u)o+='<circle cx="'+ep[0].toFixed(1)+'" cy="'+ep[1].toFixed(1)+'" r="'+Math.max(0.8,0.011*u*ep[3]).toFixed(1)+'" fill="#1b1512" fill-opacity=".85"/>'});
+  var np=P((f?0.095:0.103)*u,0,0.925*h);if(!bald&&np[2]<hd[2]-0.004*u)o+='<circle cx="'+np[0].toFixed(1)+'" cy="'+np[1].toFixed(1)+'" r="'+Math.max(0.8,0.014*u*np[3]).toFixed(1)+'" fill="'+shadeC(cs,0.92)+'"/>';
   if(!bald&&e.hair==='bun'&&c<=0)o+='<circle cx="'+bx.toFixed(1)+'" cy="'+by.toFixed(1)+'" r="'+(r*0.5).toFixed(1)+'" fill="'+ch+'"/>';
   return o;
 }
@@ -3190,6 +3192,7 @@ $('#edPrintBtn').addEventListener('click',function(){
 });
 
 /* Produzione › Edizione, nella pagina iniziale: un bollettino per ogni progetto storyboard */
+var edArm=null,edArmT=null;
 function edHubRender(){
   var idx=readIndex().slice().sort(function(a,b){return (b.updated||0)-(a.updated||0)}),h='',n=0;
   idx.forEach(function(m){
@@ -3198,12 +3201,27 @@ function edHubRender(){
     h+='<article class="pcard"><button type="button" class="pthumb" data-edo="'+m.id+'" aria-label="Apri il bollettino di '+esc(d.title||'progetto senza titolo')+'"><div class="swp"><b>Bollettino edizione</b><i>'+(E&&E.head.prod?esc(E.head.prod)+' · ':'')+t+'</i></div></button><div class="pbd"><h3>'+t+'</h3>'+
       '<div class="kv">'+(E?np+(np===1?' pagina':' pagine')+' · '+c+(c===1?' riga compilata':' righe compilate'):'Non ancora compilato')+'</div>'+
       '<div class="kv">Modificato '+esc(fmtDate(m.updated))+'</div>'+
-      '<div class="pact"><button type="button" class="btn primary" data-edo="'+m.id+'">Apri bollettino</button></div></div></article>';
+      '<div class="pact"><button type="button" class="btn primary" data-edo="'+m.id+'">Apri bollettino</button>'+(E?'<button type="button" class="btn danger" data-edx="'+m.id+'">'+(edArm===m.id?'Conferma':'Elimina')+'</button>':'')+'</div></div></article>';
   });
   $('#edHubList').innerHTML=h||'<p class="noproj">Nessun progetto storyboard in questo browser: il bollettino d\'edizione si compila dentro un progetto.</p>';
   $('#edHubCount').textContent='('+n+')';
 }
-$('#edHubList').addEventListener('click',function(ev){var o=ev.target.closest('[data-edo]');if(o)openProject(o.dataset.edo,'ed')});
+$('#edHubList').addEventListener('click',function(ev){
+  var x=ev.target.closest('[data-edx]');
+  if(x){
+    var id=x.dataset.edx;
+    if(edArm!==id){edArm=id;clearTimeout(edArmT);edArmT=setTimeout(function(){edArm=null;edHubRender()},3000);edHubRender();return}
+    clearTimeout(edArmT);edArm=null;
+    try{var raw=localStorage.getItem(PK(id));if(raw){var d=JSON.parse(raw);delete d.ed;localStorage.setItem(PK(id),JSON.stringify(d))}}
+    catch(e){toast('Non riesco a eliminare il bollettino');edHubRender();return}
+    if(curId===id&&S){
+      delete S.ed;
+      hist=hist.map(function(hs){try{var q=JSON.parse(hs);delete q.ed;return JSON.stringify(q)}catch(e){return hs}});
+      lastSaved=JSON.stringify(S);
+    }
+    toast('Bollettino eliminato');edHubRender();return;
+  }
+  var o=ev.target.closest('[data-edo]');if(o)openProject(o.dataset.edo,'ed')});
 window.__ciakEd={hub:edHubRender};
 
 /* ---------- dati e progetto ---------- */
@@ -4158,7 +4176,7 @@ var tmBridge=(function(){
     }
     window.scrollTo(wx,wy);st=$('#strip');if(st)st.scrollLeft=sl;
   }
-  var SKIP={panels:1,seq:1,world:1,cur:1};
+  var SKIP={panels:1,seq:1,world:1,cur:1,ed:1};
   function copyMeta(d,N){
     Object.keys(N).forEach(function(k){if(!SKIP[k])d[k]=N[k]});
     Object.keys(d).forEach(function(k){if(!SKIP[k]&&!(k in N))delete d[k]});
@@ -4170,6 +4188,7 @@ var tmBridge=(function(){
     snap:function(){return S?JSON.stringify(S):null},
     /* dove stai lavorando: l'inquadratura aperta nella vista Scena */
     where:function(){
+      if(!MOB&&S&&curId&&view==='ed')return {id:'ed',label:'Produzione · Edizione'};
       if(MOB||!S||!curId||view!=='scena')return null;
       var p=S.panels[S.cur];if(!p)return null;
       return {id:'p:'+(p.id||'i'+S.cur),label:'Inq. '+(S.cur+1)+(p.title?' · '+String(p.title).slice(0,24):'')};
@@ -4189,6 +4208,7 @@ var tmBridge=(function(){
       var gone={};S.panels.forEach(function(p){if(!seen[p.id])gone[p.id]=1});
       var curNew=null;np.forEach(function(p){if(p.id===curPid)curNew=p});
       var curChanged=!!curNew&&curNew!==oldCur,curGone=!curNew&&!!oldCur;
+      var edSet=!!chs.ed,edDel=(ch.del||[]).indexOf('ed')>=0;
       /* annulla/ripristina: le modifiche dei colleghi entrano in tutte le versioni della cronologia, così «annulla» non le cancella e il salvataggio dopo un annulla non rimanda indietro dati vecchi */
       hist=hist.map(function(hs){
         var d;try{d=JSON.parse(hs)}catch(e){return hs}
@@ -4203,6 +4223,8 @@ var tmBridge=(function(){
         });
         if(chs.seq&&N.seq!==undefined)d.seq=N.seq;
         if(chs.world&&N.world!==undefined)d.world=N.world;
+        if(edSet&&N.ed!==undefined)d.ed=N.ed;
+        if(edDel)delete d.ed;
         if(ch.meta)copyMeta(d,N);
         return JSON.stringify(d);
       });
@@ -4210,6 +4232,8 @@ var tmBridge=(function(){
       S.cur=curNew?np.indexOf(curNew):clamp(S.cur,0,np.length-1);
       if(chs.seq&&N.seq!==undefined)S.seq=N.seq;
       if(chs.world&&N.world!==undefined)S.world=N.world;
+      if(edSet&&N.ed!==undefined)S.ed=edNorm(N.ed);
+      if(edDel)delete S.ed;
       if(ch.meta)copyMeta(S,N);
       try{if(sel===MULTI)applySel(multi);else if(sel&&!getEl(sel))sel=null}catch(e){sel=null}
       /* ridisegno: se cambia l'inquadratura aperta (o i dati generali) si ridisegna tutto, altrimenti solo striscia e viste elenco: il cursore, la scena aperta e il 3D non si toccano */
@@ -5428,7 +5452,7 @@ function hash(s){
   return (a>>>0).toString(36)+(b>>>0).toString(36)+'.'+s.length.toString(36);
 }
 function P(s){return JSON.parse(s)}
-function special(id){return id==='maps'||id==='seq'||id==='world'}
+function special(id){return id==='maps'||id==='seq'||id==='world'||id==='ed'}
 function uniq(seen,id){if(!seen[id]){seen[id]=1;return id}var n=2;while(seen[id+'~'+n])n++;id=id+'~'+n;seen[id]=1;return id}
 function rest(d,skip){var m={};Object.keys(d).forEach(function(k){if(skip.indexOf(k)<0)m[k]=d[k]});return canon(m)}
 function ohash(o){return hash(o.join('|'))}
@@ -5450,7 +5474,8 @@ function split(kind,json){
   (Array.isArray(d.panels)?d.panels:[]).forEach(function(p,i){var id=uniq(seen,'p:'+((p&&p.id)||'i'+i));items[id]=canon(p);order.push(id)});
   if(d.seq!==undefined)items.seq=canon(d.seq);
   if(d.world!==undefined)items.world=canon(d.world);
-  return {meta:rest(d,['panels','seq','world','cur']),order:order,items:items};
+  if(d.ed!==undefined)items.ed=canon(d.ed);   /* Produzione: bollettino d'edizione */
+  return {meta:rest(d,['panels','seq','world','cur','ed']),order:order,items:items};
 }
 /* elementi -> stringa JSON del progetto; cur (posizione locale) resta quella di chi apre */
 function assemble(kind,meta,order,items,cur){
@@ -5462,6 +5487,7 @@ function assemble(kind,meta,order,items,cur){
     d.panels=order.filter(function(id){return items[id]!==undefined&&id.slice(0,2)==='p:'}).map(function(id){return P(items[id])});
     if(items.seq!==undefined)d.seq=P(items.seq);
     if(items.world!==undefined)d.world=P(items.world);
+    if(items.ed!==undefined)d.ed=P(items.ed);
     d.cur=Math.min(Math.max(+cur||0,0),Math.max(d.panels.length-1,0));
   }
   return JSON.stringify(d);
@@ -5616,7 +5642,7 @@ function who(){return (me.name||'Senza nome')+' ('+roleLabel(me.role,me.g)+')'}
 function meObj(at){var o={name:me.name||'Senza nome',role:me.role,g:me.g,ts:Date.now()};o.at=at?{id:at.id,label:at.label,since:at.since||Date.now()}:null;return o}
 function memberPatch(k){var u={members:{}};u.members[uid]=meObj(atKey[k]);return u}
 function bytes(s){try{return s.length>200000?Math.round(s.length*1.05):new Blob([s]).size}catch(e){return s.length}}
-function labelOf(kind,id,s){try{var v=JSON.parse(s);if(kind==='sw')return String((v[0]&&v[0].x)||'Scena').slice(0,40);return String(v.title||'Inquadratura').slice(0,40)}catch(e){return id}}
+function labelOf(kind,id,s){if(id==='ed')return 'Produzione · Edizione';try{var v=JSON.parse(s);if(kind==='sw')return String((v[0]&&v[0].x)||'Scena').slice(0,40);return String(v.title||'Inquadratura').slice(0,40)}catch(e){return id}}
 function keyOf(code){return Object.keys(links).filter(function(k){return links[k].code===code})[0]||null}
 
 /* ---------- presenza e blocco: chi lavora su cosa ----------
@@ -6059,6 +6085,7 @@ function render(){
     var card=h('div',{'class':'card'},[
       h('div',{'class':'row'},[title]),
       h('div',{'class':'row',style:'margin:8px 0'},[h('span',{'class':'code',text:L.code}),h('button',{'class':'tb',type:'button',text:'Copia codice',onclick:function(){copy(L.code,'Codice copiato')}}),lk?h('button',{'class':'tb',type:'button',text:'Copia link',onclick:function(){copy(lk,'Link copiato')}}):null]),
+      h('div',{'class':'st',text:L.kind==='sw'?(hasPair?'Include sceneggiatura, storyboard e Produzione (bollettino d\'edizione)':'Include la sceneggiatura'):'Include inquadrature e Produzione (bollettino d\'edizione)'}),
       h('div',{'class':'st'+(syncErr[L.code]?' bad':''),text:statusTxt(L.code)+(byWho[L.code]&&!syncErr[L.code]?' · ultima modifica: '+byWho[L.code]:'')}),
       mine?h('div',{'class':'here',text:'Stai lavorando su: '+mine.label}):null,
       h('div',{},uids.map(function(u){return memberChip(u,mem[u])})),
