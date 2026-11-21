@@ -5852,21 +5852,66 @@ function touchIndex(k,d){try{var kind=links[k].kind,a=jget(idxKey(kind),[]),id=k
 
 /* ---------- condividi / unisciti / esci ---------- */
 function projectList(){
-  var o=[];jget('ciak-index-v2',[]).forEach(function(m){o.push({key:'ciak-project-'+m.id,kind:'sb',label:'Storyboard · '+(m.title||'Senza titolo')})});
-  jget('ciak-sw-index',[]).forEach(function(m){o.push({key:'ciak-sw-p-'+m.id,kind:'sw',label:'Sceneggiatura · '+(m.title||'Senza titolo')})});
+  var o=[];jget('ciak-index-v2',[]).forEach(function(m){if(m.link)return;o.push({key:'ciak-project-'+m.id,kind:'sb',label:'Storyboard · '+(m.title||'Senza titolo')})});
+  jget('ciak-sw-index',[]).forEach(function(m){o.push({key:'ciak-sw-p-'+m.id,kind:'sw',label:(linkedSb('ciak-sw-p-'+m.id)?'Progetto (sceneggiatura + storyboard) · ':'Sceneggiatura · ')+(m.title||'Senza titolo')})});
   return o;
 }
 function newCode(){var c='',a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',i;for(i=0;i<6;i++)c+=a[Math.floor(Math.random()*a.length)];return c}
-function share(key,kind){
+function shareOne(key,kind,extra,quiet){
   var v=LS.getItem(key);if(!v){toast('Progetto non trovato');return Promise.resolve()}
   var code=newCode(),p=Core.planPush(kind,v,{});
   return ref(code).get().then(function(s){
-    if(s.exists)return share(key,kind);   /* codice già in uso: ne genero un altro */
+    if(s.exists)return shareOne(key,kind,extra,quiet);   /* codice già in uso: ne genero un altro */
     var rev=Date.now(),by=who(),rr=R[code]={meta:p.meta,order:p.order,items:{},removed:[]},ops=[],mem={};mem[uid]=meObj(null);
     Object.keys(p.set).forEach(function(id){rr.items[id]=p.set[id];ops.push(function(b){b.set(items(code).doc(id),{d:p.set[id],by:uid,byName:by,rev:rev})})});
-    ops.push(function(b){b.set(ref(code),{fmt:2,kind:kind,title:(function(){try{return String(JSON.parse(v).title||'')}catch(e){return ''}})(),meta:p.meta,order:p.order,mby:uid,by:uid,byName:by,rev:rev,owner:uid,members:mem})});
+    ops.push(function(b){b.set(ref(code),Object.assign({fmt:2,kind:kind,title:(function(){try{return String(JSON.parse(v).title||'')}catch(e){return ''}})(),meta:p.meta,order:p.order,mby:uid,by:uid,byName:by,rev:rev,owner:uid,members:mem},extra||{}))});
     return new Promise(function(res,rej){chunkRun(ops,res,rej)}).then(function(){
-      links[key]={code:code,kind:kind,h:p.base};jset('ciak-team-links',links);syncAt[code]=Date.now();listen(key);sel=code;render();toast('Progetto condiviso. Codice: '+code);
+      links[key]={code:code,kind:kind,h:p.base};jset('ciak-team-links',links);syncAt[code]=Date.now();listen(key);if(!quiet){sel=code;render();toast('Progetto condiviso. Codice: '+code)}return code;
+    });
+  });
+}
+/* progetto unico: la sceneggiatura porta con sé lo storyboard collegato (stesso codice per tutti) */
+function linkedSb(swKey){
+  var sid=swKey.replace(/^ciak-sw-p-/,''),m=jget('ciak-index-v2',[]).filter(function(x){return x.link===sid})[0];
+  return m&&LS.getItem('ciak-project-'+m.id)?'ciak-project-'+m.id:null;
+}
+function share(key,kind){
+  var sb=kind==='sw'?linkedSb(key):null;
+  if(!sb||links[sb])return shareOne(key,kind);
+  return shareOne(sb,'sb',{},true).then(function(c2){
+    return shareOne(key,kind,{pair:c2}).then(function(c){
+      ref(c2).set({pairOf:c},{merge:true}).catch(function(){});
+      toast('Progetto condiviso (sceneggiatura + storyboard). Codice: '+c);return c;
+    });
+  });
+}
+/* sceneggiatura già condivisa: aggiunge lo storyboard collegato (nato dopo, o non ancora condiviso) */
+function addPair(swKey){
+  var L=links[swKey],sb=linkedSb(swKey);if(!L||!sb||links[sb])return Promise.resolve();
+  return shareOne(sb,'sb',{pairOf:L.code},true).then(function(c2){
+    return ref(L.code).set({pair:c2},{merge:true}).then(function(){toast('Storyboard collegato aggiunto al progetto')});
+  });
+}
+/* chi entra nel progetto riceve anche lo storyboard, agganciato alla propria copia della sceneggiatura */
+function joinPair(swKey,code2){
+  if(!code2)return Promise.resolve();
+  var sid=swKey.replace(/^ciak-sw-p-/,'');
+  if(Object.keys(links).some(function(x){return links[x].code===code2}))return Promise.resolve();
+  return ref(code2).get().then(function(s){
+    if(!s.exists)return;var d=s.data();if(d.fmt!==2||d.kind!=='sb')return;
+    return items(code2).get().then(function(q){
+      var its={};q.docs.forEach(function(x){var y=x.data();if(y&&typeof y.d==='string')its[x.id]=y.d});
+      var json=Core.assemble('sb',d.meta,d.order||[],its,0);
+      var id=Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,10),k='ciak-project-'+id;
+      applying=true;_set.call(LS,k,json);applying=false;
+      var a=jget('ciak-index-v2',[]);
+      /* se la sceneggiatura ha già generato uno storyboard vuoto, lo sostituisco con quello del team */
+      a=a.filter(function(m){if(m.link!==sid)return true;try{LS.removeItem('ciak-project-'+m.id)}catch(e){}return false});
+      var e={id:id,link:sid,title:d.title||'',updated:Date.now()};try{e.n=JSON.parse(json).panels.length}catch(x){}
+      a.push(e);jset('ciak-index-v2',a);
+      links[k]={code:code2,kind:'sb',h:Core.planPush('sb',json,{}).base};jset('ciak-team-links',links);
+      R[code2]={meta:d.meta,order:d.order||[],items:its,removed:[]};
+      return ref(code2).set(memberPatch(k),{merge:true}).then(function(){listen(k);refreshHome();try{if(window.__ciakSw&&window.__ciakSw.resync)window.__ciakSw.resync()}catch(x){}});
     });
   });
 }
@@ -5875,7 +5920,7 @@ function join(code,again){
   return ref(code).get().then(function(s){
     if(!s.exists)throw new Error('Codice non valido');
     var d=s.data(),k=Object.keys(links).filter(function(x){return links[x].code===code})[0];
-    if(k)return ref(code).set(memberPatch(k),{merge:true}).then(function(){listen(k);sel=code;render();toast('Sei già in questo team')});
+    if(k)return ref(code).set(memberPatch(k),{merge:true}).then(function(){listen(k);sel=code;render();toast('Sei già in questo team');return joinPair(k,d.pair)});
     if(d.fmt!==2){
       /* team creato con la versione precedente: lo converto io e poi riprovo */
       if(again)throw new Error('Questo team è in un formato vecchio e non riesco ad aggiornarlo: controlla le regole di Firestore.');
@@ -5892,14 +5937,15 @@ function join(code,again){
       a.push(e);jset(idxKey(d.kind),a);
       links[k]={code:code,kind:d.kind,h:Core.planPush(d.kind,json,{}).base};jset('ciak-team-links',links);
       R[code]={meta:d.meta,order:d.order||[],items:its,removed:[]};
-      return ref(code).set(memberPatch(k),{merge:true}).then(function(){listen(k);sel=code;refreshHome();render();toast('Sei entrato nel team: il progetto è nell’elenco')});
+      return ref(code).set(memberPatch(k),{merge:true}).then(function(){listen(k);sel=code;refreshHome();render();return joinPair(k,d.pair)}).then(function(){refreshHome();render();toast(d.pair?'Sei entrato nel progetto: sceneggiatura e storyboard sono nell’elenco':'Sei entrato nel team: il progetto è nell’elenco')});
     });
   });
 }
-function leave(key){
+function leave(key,sub){
   var L=links[key];if(!L)return;
-  if(!window.confirm('Smetti di sincronizzare «'+((teams[L.code]||{}).title||'questo progetto')+'»? La tua copia resta sul dispositivo, ma non riceverà più le modifiche dei colleghi.'))return;
+  if(!sub&&!window.confirm('Smetti di sincronizzare «'+((teams[L.code]||{}).title||'questo progetto')+'»? La tua copia resta sul dispositivo, ma non riceverà più le modifiche dei colleghi.'))return;
   var code=L.code;
+  if(!sub&&L.kind==='sw'){var pc=(teams[code]||{}).pair;if(pc){var pk=keyOf(pc);if(pk)leave(pk,true)}}
   if(unsubs[key]){unsubs[key]();delete unsubs[key]}
   clearTimeout(timers[key]);clearTimeout(applyT[key]);clearTimeout(presT[key]);
   if(uid&&fb){var f={};f['members.'+uid]=fb.firestore.FieldValue.delete();ref(code).update(f).catch(function(){})}
@@ -5972,9 +6018,12 @@ function render(){
   b.appendChild(h('div',{},[h('h4',{text:'Unisciti a un team'}),ci,h('button',{'class':'tb p',type:'button',text:'Entra',onclick:go}),h('div',{id:'tmErr','class':'msg'})]));
   /* team attivi */
   Object.keys(links).forEach(function(k){
-    var L=links[k],d=teams[L.code]||{},mem=d.members||{},lk=inviteLink(L.code),mine=atKey[k];
+    var L=links[k],d=teams[L.code]||{},mem=d.members||{};
+    if(L.kind==='sb'&&d.pairOf&&keyOf(d.pairOf))return;
+    var hasPair=L.kind==='sw'&&d.pair&&keyOf(d.pair),canPair=L.kind==='sw'&&!hasPair&&linkedSb(k);
+    var lk=inviteLink(L.code),mine=atKey[k];
     var uids=Object.keys(mem).sort(function(a,c){return (mem[c].ts||0)-(mem[a].ts||0)});
-    var title=h('div',{style:'flex:1;font-weight:700'},[document.createTextNode((L.kind==='sw'?'Sceneggiatura · ':'Storyboard · ')+(d.title||'Senza titolo'))]);
+    var title=h('div',{style:'flex:1;font-weight:700'},[document.createTextNode((L.kind==='sw'?(hasPair?'Progetto · ':'Sceneggiatura · '):'Storyboard · ')+(d.title||'Senza titolo')+(hasPair?' (sceneggiatura + storyboard)':''))]);
 
     var card=h('div',{'class':'card'},[
       h('div',{'class':'row'},[title]),
@@ -5982,6 +6031,7 @@ function render(){
       h('div',{'class':'st'+(syncErr[L.code]?' bad':''),text:statusTxt(L.code)+(byWho[L.code]&&!syncErr[L.code]?' · ultima modifica: '+byWho[L.code]:'')}),
       mine?h('div',{'class':'here',text:'Stai lavorando su: '+mine.label}):null,
       h('div',{},uids.map(function(u){return memberChip(u,mem[u])})),
+      canPair?h('button',{'class':'tb',type:'button',text:'Condividi anche lo storyboard collegato',style:'margin-top:8px;display:block',onclick:function(){addPair(k).catch(err)}}):null,
       h('button',{'class':'tb',type:'button',text:'Smetti di sincronizzare',style:'margin-top:8px',onclick:function(){leave(k)}})]);
     b.appendChild(card);
   });
