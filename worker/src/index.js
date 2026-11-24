@@ -40,6 +40,8 @@ async function web(q, env) {
   return { results: ((j.web && j.web.results) || []).map(x => ({ title: x.title, url: x.url, description: String(x.description || '').replace(/<[^>]+>/g, ''), age: x.age || '' })) };
 }
 
+function isoSec(s) { const m = /^P(?:\d+D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(s || ''); return m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0; }
+
 async function yt(q, env, minutes) {
   if (!env.YT_KEY) throw Object.assign(new Error('yt-non-configurato'), { status: 503 });
   const d = minutes && minutes < 4 ? 'short' : 'medium';
@@ -47,9 +49,9 @@ async function yt(q, env, minutes) {
   if (!s.ok) throw Object.assign(new Error('youtube-' + s.status), { status: 502 });
   const sj = await s.json(), ids = (sj.items || []).map(i => i.id && i.id.videoId).filter(Boolean);
   if (!ids.length) return { results: [] };
-  const v = await fetch('https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=' + ids.join(',') + '&key=' + env.YT_KEY);
+  const v = await fetch('https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id=' + ids.join(',') + '&key=' + env.YT_KEY);
   const vj = await v.json();
-  return { results: (vj.items || []).map(x => { const st = x.statistics || {}; return { id: x.id, t: x.snippet.title, ch: x.snippet.channelTitle, v: +st.viewCount || 0, l: +st.likeCount || 0, c: +st.commentCount || 0 }; }).sort((a, b) => b.v - a.v) };
+  return { results: (vj.items || []).map(x => { const st = x.statistics || {}; return { id: x.id, t: x.snippet.title, ch: x.snippet.channelTitle, v: +st.viewCount || 0, l: +st.likeCount || 0, c: +st.commentCount || 0, d: isoSec((x.contentDetails || {}).duration) }; }).sort((a, b) => b.v - a.v) };
 }
 
 /* lettura di una pagina pubblica (es. regolamento o palmarès di un festival): solo https, niente indirizzi interni */
@@ -109,4 +111,4 @@ export default {
   }
 };
 
-export { safeUrl };
+export { safeUrl, isoSec };
