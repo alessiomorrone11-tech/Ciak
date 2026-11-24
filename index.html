@@ -299,7 +299,7 @@ h1,h2,h3{margin:0;font-family:var(--font-display);text-transform:uppercase;lette
 .imlbl{font-family:var(--font-display);font-size:20px;letter-spacing:.04em}.imrow{margin-bottom:10px}.imh{display:flex;justify-content:space-between;font-size:13px}.imbar{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;margin:3px 0}.imbar i{display:block;height:100%;border-radius:4px}
 .imrow small{display:block;color:var(--muted);font-size:12px}.imtip{color:var(--ink)!important;margin-top:2px}.imcons{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0}.imc{font-size:12px;border:1px solid var(--danger);color:var(--danger);border-radius:10px;padding:1px 8px}.imc.ok{border-color:var(--cold);color:var(--cold)}.imc.mid{border-color:var(--warm);color:var(--warm)}
 .imul{margin:0 0 8px 18px;padding:0;font-size:13px}.imul li{margin-bottom:4px}.imh3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px}.imref{display:block;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;color:var(--ink);text-decoration:none;background:var(--bg)}.imref:hover{border-color:var(--accent)}.imref b{display:block;font-size:13px}.imref span{font-size:12px;color:var(--muted)}
-.imlinks{margin-top:10px}.imlinks a{text-decoration:none;color:var(--ink)}.imkey{margin-top:10px;font-size:12px;color:var(--muted)}.imkey summary{cursor:pointer}.imkey input{width:100%;margin-top:6px}
+.imaud{font-style:normal;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:0 6px;margin-left:6px}.imbm{text-align:left!important;margin:8px 0 0!important}.imlinks{margin-top:10px}.imlinks a{text-decoration:none;color:var(--ink)}.imkey{margin-top:10px;font-size:12px;color:var(--muted)}.imkey summary{cursor:pointer}.imkey input{width:100%;margin-top:6px}
 /* sceneggiatura */
 .hub{width:max-content;max-width:100%;margin:0 auto 28px}.hub button{font-size:20px;padding:8px 24px}
 .swp{display:flex;flex-direction:column;gap:6px;padding:14px;height:100%;background:var(--surface);color:var(--ink);text-align:left;line-height:1.35;font-family:var(--font-script);font-size:11px;overflow:hidden}
@@ -7122,6 +7122,7 @@ var IMG={
 var IMALIAS={horror:/horror|paura|spaventos\w*|splatter/i,thriller:/thriller|giallo|noir|suspense|mistero|crime/i,commedia:/comme\w*|comic\w*|comedy|ridere|satira/i,drammatico:/dramma\w*|drama|intimista/i,fantascienza:/fantascienza|sci-?fi|distopi\w*|fantasy/i,romantico:/romantic\w*|d’amore|d'amore|love/i,azione:/azione|action/i,animazione:/animazion\w*|animat\w*/i};
 var IMSTOP=/^(sto|lavorando|lavoro|a|ad|un|uno|una|il|lo|la|le|i|gli|di|del|della|dello|dei|per|al|alla|allo|ai|alle|in|su|e|che|mio|mia|nuovo|nuova|film|cortometraggio|corto|short|scrivendo|scrivo|devo|fare|girare|realizzare)$/i;
 var imTm=0,imFt=0,imAb=null,imCache={};
+var IM_AUD_W=.2;   /* quota del punteggio data ai segnali del pubblico (YouTube) */
 function imS(){if(!S.imp||typeof S.imp!=='object')S.imp={};if(!S.imp.el)S.imp.el={};return S.imp}
 function imNorm(x){return String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim()}
 function imCtx(){
@@ -7153,10 +7154,11 @@ var IMTENS=/\b(ma|non|mai|basta|no|fermo|fermati|aiuto|urla|urlo|corre|corrono|s
 function imScore(){
   var A=imAn(),C=imCtx(),G=IMG[C.genre]||null,im=imS(),R=[];
   if(A.words<25)return {empty:true,A:A,C:C};
-  var L=C.min||10,mins=A.pages;
+  var BM=imBench(C),expl=C.fest48||/\d/.test(im.ctx||''),L=C.min||10,mins=A.pages,fromBM=false;
+  if(!expl&&BM&&BM.dur){L=Math.max(2,Math.round(BM.dur*1.25));fromBM=true}
   /* durata */
   var dur=mins>L?Math.max(0,Math.round(100-(mins-L)/L*250)):imBand(mins,L*.55,L,L*.55);
-  R.push({k:'Durata',w:20,v:dur,d:'≈ '+mins.toFixed(1)+' min di lettura, limite '+L+' min'+(C.min&&!(/\d/.test(im.ctx||''))?' (stimato)':''),
+  R.push({k:'Durata',w:20,v:dur,d:'≈ '+mins.toFixed(1)+' min di lettura, limite '+L+' min'+(fromBM?' (dai corti più apprezzati)':(C.min&&!(/\d/.test(im.ctx||''))?' (stimato)':'')),
     tip:mins>L?'Sei oltre il limite: taglia scene o battute. Fuori tempo massimo spesso significa squalifica o penalità.':mins<L*.55?'Hai ancora spazio: puoi sviluppare la svolta o il finale.':''});
   /* gancio: primi blocchi dopo il titolo */
   var head=A.seq.slice(0,Math.max(4,Math.round(A.seq.length*.12))),hs=0,ht=head.map(function(s){return s.x}).join(' '),first=head.filter(function(s){return s.t==='a'})[0];
@@ -7195,9 +7197,20 @@ function imScore(){
     if(el.genre){var gk='';Object.keys(IMALIAS).forEach(function(k){if(!gk&&IMALIAS[k].test(el.genre))gk=k});cons.push({k:'Genere',ok:!gk||gk===C.genre?1:0,t:el.genre})}
     if(cons.length)R.push({k:'Vincoli del festival',w:25,v:Math.round(cons.reduce(function(a,c){return a+c.ok},0)/cons.length*100),d:cons.filter(function(c){return c.ok===1}).length+' su '+cons.length+' elementi obbligatori rispettati',
       tip:cons.some(function(c){return c.ok<1})?'Controlla gli elementi obbligatori: nelle gare a vincoli sono il primo criterio di valutazione.':'',cons:cons})}
+  if(BM&&BM.dur){var bd=BM.dur,av=imBand(mins,bd*.6,bd*1.3,bd*.8),cw=0;R.forEach(function(r){cw+=r.w});
+    R.push({k:'Durata dei più apprezzati',aud:1,w:Math.round(cw*IM_AUD_W/(1-IM_AUD_W)),v:av,d:'mediana '+bd.toFixed(1)+' min nei '+BM.nd+' corti con più like e commenti (tra i '+BM.n+' più visti)',
+      tip:mins<bd*.6?'Sei più breve dei corti che il pubblico premia di più: valuta se hai spazio per sviluppare svolta e finale.':mins>bd*1.3?'Sei più lungo dei corti che il pubblico premia di più: la sintesi di solito paga.':''})}
   var sw=0,sv=0;R.forEach(function(r){sw+=r.w;sv+=r.w*r.v});
   var conf=Math.min(1,mins/(L*.35));return {total:Math.round(sv/sw*(.5+.5*conf)),short:conf<1?Math.ceil(L*.35):0,rows:R,A:A,C:C,G:G};
 }
+function imIso(s){var m=/^P(?:\d+D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(s||'');return m?(+m[1]||0)*3600+(+m[2]||0)*60+(+m[3]||0):0}
+function imMed(a){a=a.slice().sort(function(x,y){return x-y});var n=a.length;return n?(n%2?a[(n-1)/2]:(a[n/2-1]+a[n/2])/2):0}
+function imBench(C){
+  var r=imCache[imKey(C)],y=r&&r.yt,ok=(y||[]).filter(function(v){return v.v>0});if(ok.length<3)return null;
+  var best=ok.slice().sort(function(a,b){return (b.l+b.c*3)/b.v-(a.l+a.c*3)/a.v}).slice(0,Math.max(3,Math.ceil(ok.length/2))),ds=best.filter(function(v){return v.d>0}).map(function(v){return v.d/60});
+  return {n:ok.length,nd:ds.length,dur:ds.length>=3?imMed(ds):0,like:imMed(ok.map(function(v){return v.l/v.v*100})),com:imMed(ok.map(function(v){return v.c/v.v*1000}))};
+}
+function imBenchHtml(C){var B=imBench(C);return B?'<p class="hint imbm">Pubblico · '+B.n+' corti più visti su YouTube'+(B.dur?': durata mediana dei più apprezzati <b>'+B.dur.toFixed(1)+' min</b>':'')+' · like mediani <b>'+B.like.toFixed(1)+'%</b> · commenti <b>'+B.com.toFixed(1)+'</b> ogni 1000 visualizzazioni</p>':'<p class="hint imbm">Riferimento del pubblico non disponibile: l\u2019indice si basa solo sul testo.</p>'}
 function imCol(v){return v>=75?'var(--cold)':v>=50?'var(--warm)':'var(--danger)'}
 function imLabel(v){return v>=80?'Molto efficace':v>=65?'Solido':v>=45?'Da rafforzare':'Debole'}
 function imRender(){
@@ -7210,10 +7223,10 @@ function imRender(){
   var ctxh='<p class="hint" style="margin:6px 0 0">'+[C.fmt?'Formato: <b>'+esc(C.fmt)+'</b>':'',C.min?'Durata massima: <b>'+C.min+' min</b>':'',C.genre?'Genere: <b>'+esc(IMG[C.genre].n)+'</b>':'',C.fest48?'<b>48 Hour Film Project</b>: genere, personaggio, oggetto e battuta sono assegnati dagli organizzatori':''].filter(Boolean).join(' · ')+'</p>';
   if(sc0.empty){bdg.textContent='–';bdg.style.color='';out.innerHTML=ctxh+'<p class="empty">Scrivi qualche riga di sceneggiatura: l’indice si calcola mentre scrivi.</p>';imRefs(C);return}
   bdg.textContent=sc0.total;bdg.style.color=imCol(sc0.total);
-  var h=ctxh+'<div class="imtop"><div class="imring" style="--p:'+sc0.total+';--c:'+imCol(sc0.total)+'"><b>'+sc0.total+'</b></div><div><b class="imlbl">'+imLabel(sc0.total)+'</b>'+(sc0.short?'<p class="hint" style="margin:2px 0 0;text-align:left;color:var(--warm)">Testo ancora breve: il punteggio è prudente e si stabilizza oltre ≈ '+sc0.short+' min.</p>':'')+'<p class="hint" style="margin:2px 0 0;text-align:left">Indice calcolato sul testo che hai scritto, rispetto a ciò che di solito funziona nei corti del genere e alle regole indicate. È una bussola di mestiere, non una previsione di successo.</p></div></div>';
+  var h=ctxh+imBenchHtml(C)+'<div class="imtop"><div class="imring" style="--p:'+sc0.total+';--c:'+imCol(sc0.total)+'"><b>'+sc0.total+'</b></div><div><b class="imlbl">'+imLabel(sc0.total)+'</b>'+(sc0.short?'<p class="hint" style="margin:2px 0 0;text-align:left;color:var(--warm)">Testo ancora breve: il punteggio è prudente e si stabilizza oltre ≈ '+sc0.short+' min.</p>':'')+'<p class="hint" style="margin:2px 0 0;text-align:left">Indice calcolato sul testo che hai scritto, rispetto a ciò che di solito funziona nei corti del genere e alle regole indicate. È una bussola di mestiere, non una previsione di successo.</p></div></div>';
   h+=sc0.rows.map(function(r){
     var cs=r.cons?'<div class="imcons">'+r.cons.map(function(c){return '<span class="imc'+(c.ok===1?' ok':c.ok?' mid':'')+'">'+(c.ok===1?'✓':c.ok?'~':'✗')+' '+esc(c.k)+': '+esc(c.t)+'</span>'}).join('')+'</div>':'';
-    return '<div class="imrow"><div class="imh"><span>'+esc(r.k)+'</span><b style="color:'+imCol(r.v)+'">'+r.v+'</b></div><div class="imbar"><i style="width:'+Math.max(2,r.v)+'%;background:'+imCol(r.v)+'"></i></div><small>'+esc(r.d)+'</small>'+cs+(r.tip?'<small class="imtip">→ '+esc(r.tip)+'</small>':'')+'</div>'}).join('');
+    return '<div class="imrow"><div class="imh"><span>'+esc(r.k)+(r.aud?' <em class="imaud">dati YouTube</em>':'')+'</span><b style="color:'+imCol(r.v)+'">'+r.v+'</b></div><div class="imbar"><i style="width:'+Math.max(2,r.v)+'%;background:'+imCol(r.v)+'"></i></div><small>'+esc(r.d)+'</small>'+cs+(r.tip?'<small class="imtip">→ '+esc(r.tip)+'</small>':'')+'</div>'}).join('');
   out.innerHTML=h;imRefs(C);
 }
 function imRefs(C){var w=$('#imRefW'),sg=C.genre+'|'+C.fest48+'|'+C.min+'|'+C.kw.join(' ')+'|'+(imKeyYt()?1:0)+'|'+imApiBase();if(w.dataset.s===sg)return;w.dataset.s=sg;w.innerHTML=imRefHtml(C);imBindFetch(C)}
@@ -7238,13 +7251,13 @@ function imYt(q,key,minutes){
   var d=minutes&&minutes<4?'short':'medium',u='https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&order=viewCount&videoDuration='+d+'&q='+encodeURIComponent(q)+'&key='+encodeURIComponent(key);
   return fetch(u,{signal:imAb&&imAb.signal}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j&&j.error&&j.error.message||'errore');return j})}).then(function(j){
     var ids=(j.items||[]).map(function(i){return i.id&&i.id.videoId}).filter(Boolean);if(!ids.length)return [];
-    return fetch('https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id='+ids.join(',')+'&key='+encodeURIComponent(key),{signal:imAb&&imAb.signal}).then(function(r){return r.json()}).then(function(v){return (v.items||[]).map(function(x){var s=x.statistics||{};return {id:x.id,t:x.snippet.title,ch:x.snippet.channelTitle,v:+s.viewCount||0,l:+s.likeCount||0,c:+s.commentCount||0}}).sort(function(a,b){return b.v-a.v})});
+    return fetch('https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,contentDetails&id='+ids.join(',')+'&key='+encodeURIComponent(key),{signal:imAb&&imAb.signal}).then(function(r){return r.json()}).then(function(v){return (v.items||[]).map(function(x){var s=x.statistics||{};return {id:x.id,t:x.snippet.title,ch:x.snippet.channelTitle,v:+s.viewCount||0,l:+s.likeCount||0,c:+s.commentCount||0,d:imIso((x.contentDetails||{}).duration)}}).sort(function(a,b){return b.v-a.v})});
   });
 }
 function imFmt(n){return n>=1e6?(n/1e6).toFixed(1).replace('.0','')+' M':n>=1e3?(n/1e3).toFixed(1).replace('.0','')+' k':String(n)}
 function imSearch(force){
   var C=imCtx(),im=imS();if(!im.ctx||im.ctx.trim().length<6&&!C.genre){return}
-  var k=imKey(C);if(imCache[k]&&!force){imShow(imCache[k]);return}
+  var k=imKey(C);if(imCache[k]&&!force){imShow(imCache[k]);imRender();return}
   var box=$('#imLive');if(!box)return;box.innerHTML='<p class="empty">Cerco…</p>';
   if(imAb)try{imAb.abort()}catch(e){}imAb=window.AbortController?new AbortController():null;
   var G=IMG[C.genre],fq=C.fest48?'48 Hour Film Project':C.kw.slice(0,6).join(' '),gq=(G?G.en+' ':'')+'short film awards',yk=imKeyYt(),res={fest:[],genre:[],yt:null,err:''};
@@ -7259,7 +7272,7 @@ function imSearch(force){
   if(fq)P.push(imWiki('it',fq).then(function(r){res.fest=r}).catch(function(){res.err='Wikipedia non raggiungibile'}));
   P.push(imWiki('en',gq).then(function(r){res.genre=r}).catch(function(){res.err='Wikipedia non raggiungibile'}));
   if(yk)P.push(imYt(((fq&&!C.fest48?fq+' ':C.fest48?fq+' ':'')+(G?G.en+' ':'')+'short film').trim(),yk,C.min).then(function(r){res.yt=r}).catch(function(e){res.yt=null;res.err=(res.err?res.err+' · ':'')+'YouTube: '+(e&&e.message||'errore')}));
-  Promise.all(P).then(function(){imCache[k]=res;imShow(res)});
+  Promise.all(P).then(function(){imCache[k]=res;imShow(res);imRender()});
 }
 function imShow(res){
   var box=$('#imLive');if(!box)return;
