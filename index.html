@@ -289,6 +289,17 @@ h1,h2,h3{margin:0;font-family:var(--font-display);text-transform:uppercase;lette
 .toast.on{opacity:1}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 
+
+/* indice d'efficacia */
+#imBox{margin-bottom:12px}#imBox[open]{max-height:62vh;overflow:auto}#imBox>summary{cursor:pointer;font-family:var(--font-display);font-size:16px;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:10px}#imBox>summary b{font-family:var(--font-mono);font-size:18px;margin-left:auto}
+.imq{display:flex;gap:8px;margin-top:10px}.imq input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;color:var(--ink)}
+#imGen{margin-top:8px}#imGen button{border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:3px 10px;font-size:12px;color:var(--ink)}#imGen button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+#imEl{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:10px}#imEl label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px}#imEl input,.imkey input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;color:var(--ink);min-width:0}
+#imEl[hidden]{display:none}.imtop{display:flex;gap:14px;align-items:center;margin:12px 0}.imring{--p:0;--c:var(--accent);width:78px;height:78px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%),var(--surface2) 0);display:grid;place-items:center;flex:none;position:relative}.imring:before{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--surface)}.imring b{position:relative;font-family:var(--font-display);font-size:28px}
+.imlbl{font-family:var(--font-display);font-size:20px;letter-spacing:.04em}.imrow{margin-bottom:10px}.imh{display:flex;justify-content:space-between;font-size:13px}.imbar{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;margin:3px 0}.imbar i{display:block;height:100%;border-radius:4px}
+.imrow small{display:block;color:var(--muted);font-size:12px}.imtip{color:var(--ink)!important;margin-top:2px}.imcons{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0}.imc{font-size:12px;border:1px solid var(--danger);color:var(--danger);border-radius:10px;padding:1px 8px}.imc.ok{border-color:var(--cold);color:var(--cold)}.imc.mid{border-color:var(--warm);color:var(--warm)}
+.imul{margin:0 0 8px 18px;padding:0;font-size:13px}.imul li{margin-bottom:4px}.imh3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px}.imref{display:block;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;color:var(--ink);text-decoration:none;background:var(--bg)}.imref:hover{border-color:var(--accent)}.imref b{display:block;font-size:13px}.imref span{font-size:12px;color:var(--muted)}
+.imlinks{margin-top:10px}.imlinks a{text-decoration:none;color:var(--ink)}.imkey{margin-top:10px;font-size:12px;color:var(--muted)}.imkey summary{cursor:pointer}.imkey input{width:100%;margin-top:6px}
 /* sceneggiatura */
 .hub{width:max-content;max-width:100%;margin:0 auto 28px}.hub button{font-size:20px;padding:8px 24px}
 .swp{display:flex;flex-direction:column;gap:6px;padding:14px;height:100%;background:var(--surface);color:var(--ink);text-align:left;line-height:1.35;font-family:var(--font-script);font-size:11px;overflow:hidden}
@@ -907,6 +918,14 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
   <section id="swP-testo" class="swgrid" style="margin-top:14px">
     <details class="card swnoprint" id="swNav" open><summary>Scene</summary><div id="swNavL"></div></details>
     <div>
+    <details class="card swnoprint" id="imBox">
+      <summary>Indice d'efficacia <b id="imScore">–</b></summary>
+      <div class="imq"><input id="imCtx" type="text" aria-label="Contesto del progetto" placeholder="Es. sto lavorando a un cortometraggio per il 48H Film Festival di Roma" autocomplete="off"><button type="button" class="btn primary" id="imGo">Cerca</button><button type="button" class="btn" id="imElBtn" title="Elementi obbligatori del festival">Vincoli</button></div>
+      <div class="chips" id="imGen" aria-label="Genere"></div>
+      <div id="imEl" hidden><label>Genere assegnato<input id="imE-genre" type="text" placeholder="es. Horror"></label><label>Personaggio obbligatorio<input id="imE-char" type="text" placeholder="es. Marco, tassista"></label><label>Oggetto obbligatorio<input id="imE-prop" type="text" placeholder="es. una chiave"></label><label>Battuta obbligatoria<input id="imE-line" type="text" placeholder="es. Non è come sembra"></label></div>
+      <div id="imOut"></div><div id="imRefW"></div>
+      <details class="imkey"><summary>Fonti</summary>Wikipedia è sempre attiva. Per visualizzazioni e like reali dei corti più visti incolla una chiave YouTube Data API v3 (resta solo in questo browser).<input id="imYt" type="password" placeholder="Chiave YouTube Data API" autocomplete="off"><br><br>Server di ricerca Ciak (Cloudflare Worker, con ricerca web Brave): incolla qui il suo indirizzo.<span style="display:flex;gap:6px;margin-top:6px"><input id="imApi" type="url" placeholder="https://ciak-search.….workers.dev" autocomplete="off" style="margin:0"><button type="button" class="btn" id="imApiT">Prova</button></span><span id="imApiS" class="hint" style="text-align:left;display:block"></span></details>
+    </details>
       <div class="swbar swnoprint"><div class="swtools"><div class="seg mobio"><button type="button" class="sv" data-io="save">Salva</button></div><div class="seg" id="swTypes"></div><div class="seg"><button type="button" id="swDual" aria-pressed="false" title="Mette il personaggio e le sue battute accanto al gruppo precedente">Dialogo a due voci</button></div><div class="seg" id="swTags" title="Seleziona una parola nel testo (o metti il cursore su di essa) e scegli la categoria. I tag servono solo allo storyboard: la sceneggiatura non cambia."></div></div><div class="chips" id="swSug"></div></div>
       <p class="mobhint">Tocca un blocco per scrivere</p>
       <div class="sheet notranslate" translate="no" id="swSheet"></div>
@@ -6651,6 +6670,7 @@ function nm(d){
   var o={title:String(d.title||''),author:String(d.author||''),contact:String(d.contact||''),logline:String(d.logline||''),synopsis:String(d.synopsis||'')};if(typeof d.cover==='string'&&d.cover.indexOf('data:image/')===0&&d.cover.length<400000)o.cover=d.cover;
   o.blocks=(Array.isArray(d.blocks)?d.blocks:[]).map(function(b){var n=blk(TI.indexOf(b.t)>=0?b.t:'a',String(b.x||''),String(b.syn||''));if(b.id)n.id=String(b.id);if(b.t==='c'&&b.dual)n.dual=true;var tgx=Array.isArray(b.tg)?b.tg.filter(function(g){return g&&TGK.indexOf(g.k)>=0&&g.w}).map(function(g){return {k:g.k,w:String(g.w).slice(0,60)}}):[];if(tgx.length)n.tg=tgx;if(Array.isArray(b.cm)&&b.cm.length)n.cm=b.cm.map(function(c){return {id:String(c&&c.id||uid()),x:String(c&&c.x||'').slice(0,1000),t:+(c&&c.t)||Date.now()}}).filter(function(c){return c.x});return n});
   var nn=function(n){return {id:uid(),t:String(n&&n.t||'').slice(0,200),c:(n&&Array.isArray(n.c)?n.c:[]).map(nn)}};
+  if(d.imp&&typeof d.imp==='object'){var ie=d.imp.el||{};o.imp={ctx:String(d.imp.ctx||'').slice(0,400),g:(typeof IMG!=='undefined'&&IMG[d.imp.g])?d.imp.g:'',elOpen:!!d.imp.elOpen,el:{genre:String(ie.genre||'').slice(0,80),char:String(ie.char||'').slice(0,80),prop:String(ie.prop||'').slice(0,80),line:String(ie.line||'').slice(0,200)}}}
   o.maps=(Array.isArray(d.maps)?d.maps:[]).map(function(m){return {id:uid(),name:String(m.name||'Mappa'),root:nn(m.root)}});
   if(!o.blocks.length)o.blocks=[blk('s','INT. LUOGO - GIORNO'),blk('a')];
   return o;
@@ -6786,7 +6806,7 @@ sh.addEventListener('focusin',function(e){fi=+e.target.dataset.i;hl();sug(fi)});
 sh.addEventListener('input',function(e){
   var t=e.target,i=+t.dataset.i,b=S.blocks[i];if(!b)return;
   if(UP[b.t]){var p=t.selectionStart;t.value=t.value.toUpperCase();t.setSelectionRange(p,p)}
-  b.x=t.value;grow(t);ss();sug(i);if(b.t==='s')nav();if(b.tg)tgR(i);
+  b.x=t.value;grow(t);ss();sug(i);if(b.t==='s')nav();if(b.tg)tgR(i);imLive();
 });
 sh.addEventListener('keydown',function(e){
   var t=e.target,i=+t.dataset.i,b=S.blocks[i];if(!b)return;
@@ -7075,11 +7095,207 @@ $('#swDoc').addEventListener('click',function(){
   lib(JSZ,function(){return window.JSZip}).then(function(){return mkDocx()}).then(function(b){return dl(fn()+'.docx',b)},function(){toast('Impossibile creare il file Word')});
 });
 
+/* ---- indice d'efficacia: contesto + punteggio dal testo (subito) + riferimenti dal web (Wikipedia, YouTube con chiave tua) ---- */
+var IMG={
+  horror:{n:'Horror',en:'horror',dl:[12,35],lex:/\b(buio|ombra|ombre|sangue|urlo|urla|grida|sussurr\w*|passi|porta|cantina|notte|solo|sola|silenzio|respiro|dietro|specchio|luce|spegn\w*)\b/gi,
+    fx:['Un solo luogo e una sola regola chiara: la paura nasce da ciò che il pubblico sa e il personaggio no.','Il silenzio e il fuori campo pesano più dello spavento: costruisci l’attesa, poi colpisci una volta sola.','Chiudi con un’immagine o una svolta che resti (il «dopo» dello spavento).'],
+    ex:['Lights Out (David F. Sandberg)','Curfew (Shawn Christensen)']},
+  thriller:{n:'Thriller',en:'thriller',dl:[25,50],lex:/\b(segreto|bugia|chi|perché|polizia|pistola|telefono|inseguim\w*|nascond\w*|sapevi|ti ho visto|tradito|ricatto|ora|subito|presto)\b/gi,
+    fx:['Una domanda aperta già nella prima pagina, e una risposta che ribalta ciò che il pubblico credeva.','Il tempo che stringe (una scadenza, un orologio) rende ogni scena più tesa.','Pochi personaggi, ciascuno con qualcosa da nascondere.'],
+    ex:['Curfew (Shawn Christensen)','Skin (Guy Nattiv)']},
+  commedia:{n:'Commedia',en:'comedy',dl:[45,70],lex:/\b(ridere|ridicol\w*|scherz\w*|assurd\w*|imbarazz\w*|figuraccia|cade|inciamp\w*|ma dai|davvero|ovviamente|giuro|scusa|oddio)\b/gi,
+    fx:['Una premessa semplice e un personaggio che vuole qualcosa con troppa convinzione.','Regola del tre: due volte la norma, la terza la rompi.','Battute brevi e chiusura a effetto (il «button» finale) entro l’ultimo minuto.'],
+    ex:['Ave Maria (Basil Khalil)','Stutterer (Benjamin Cleary) per il tono agrodolce']},
+  drammatico:{n:'Drammatico',en:'drama',dl:[35,60],lex:/\b(famiglia|madre|padre|figlio|figlia|perdono|addio|lacrime|piange|piangere|silenzio|ricordi\w*|ti amo|mancare|manchi|solo|sola|casa)\b/gi,
+    fx:['Un desiderio concreto e un ostacolo personale: l’emozione viene dal costo della scelta.','Mostra invece di spiegare: un gesto o un oggetto valgono una pagina di dialogo.','Un finale aperto ma preciso, che lascia una domanda al pubblico.'],
+    ex:['Stutterer (Benjamin Cleary)','The Silent Child (Chris Overton)']},
+  fantascienza:{n:'Fantascienza',en:'science fiction',dl:[25,55],lex:/\b(futuro|tempo|macchina|robot|pianeta|astronave|segnale|codice|sistema|memoria|simulazione|cloni?|ologramma)\b/gi,
+    fx:['Un’idea sola, spiegata in una battuta, e le sue conseguenze umane.','Poche scenografie: l’effetto vince se è al servizio dell’idea.','La svolta è un cambio di prospettiva, non un effetto speciale.'],
+    ex:['Two Distant Strangers (Travon Free, Martin Desmond Roe) per la struttura ad anello']},
+  romantico:{n:'Romantico',en:'romance',dl:[40,65],lex:/\b(amore|bacio|ti amo|cuore|insieme|mancare|manchi|incontr\w*|sguardo|sorriso|abbracc\w*|notte|lettera)\b/gi,
+    fx:['Un incontro con attrito: i due vogliono cose diverse.','Il non detto fa più dei dialoghi sul sentimento.','Un gesto finale concreto, non una dichiarazione.'],ex:['Stutterer (Benjamin Cleary)']},
+  azione:{n:'Azione',en:'action',dl:[10,35],lex:/\b(corre|corrono|salta|colpisce|spara|esplo\w*|insegue|inseguim\w*|fuga|scappa|auto|moto|pugno|lotta|salta)\b/gi,
+    fx:['Obiettivo chiaro e geografia semplice: il pubblico deve sempre capire dove sono i personaggi.','Azione descritta in righe brevi, una per immagine.','Un ostacolo nuovo ogni pagina.'],ex:[]},
+  animazione:{n:'Animazione',en:'animated',dl:[5,45],lex:/\b(vola|salta|trasform\w*|magic\w*|colore|colori|piccolo|gigante)\b/gi,
+    fx:['Racconta per immagini: il dialogo è facoltativo.','Un personaggio riconoscibile al primo sguardo e una sola emozione guida.','Una trovata visiva ripetuta e poi ribaltata.'],ex:[]}
+};
+var IMALIAS={horror:/horror|paura|spaventos\w*|splatter/i,thriller:/thriller|giallo|noir|suspense|mistero|crime/i,commedia:/comme\w*|comic\w*|comedy|ridere|satira/i,drammatico:/dramma\w*|drama|intimista/i,fantascienza:/fantascienza|sci-?fi|distopi\w*|fantasy/i,romantico:/romantic\w*|d’amore|d'amore|love/i,azione:/azione|action/i,animazione:/animazion\w*|animat\w*/i};
+var IMSTOP=/^(sto|lavorando|lavoro|a|ad|un|uno|una|il|lo|la|le|i|gli|di|del|della|dello|dei|per|al|alla|allo|ai|alle|in|su|e|che|mio|mia|nuovo|nuova|film|cortometraggio|corto|short|scrivendo|scrivo|devo|fare|girare|realizzare)$/i;
+var imTm=0,imFt=0,imAb=null,imCache={};
+function imS(){if(!S.imp||typeof S.imp!=='object')S.imp={};if(!S.imp.el)S.imp.el={};return S.imp}
+function imNorm(x){return String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim()}
+function imCtx(){
+  var im=imS(),t=im.ctx||'',o={fest48:/(\b48\s*h\b|\b48\s*hours?\b|\b48\s*ore\b)/i.test(t),genre:'',fmt:'',min:0,kw:[]};
+  Object.keys(IMALIAS).forEach(function(k){if(!o.genre&&IMALIAS[k].test(t))o.genre=k});
+  if(im.g&&IMG[im.g])o.genre=im.g;
+  var el=im.el||{};if(!o.genre&&el.genre){Object.keys(IMALIAS).forEach(function(k){if(!o.genre&&IMALIAS[k].test(el.genre))o.genre=k})}
+  if(/lungometraggio|feature/i.test(t))o.fmt='lungometraggio';else if(/serie|episodio/i.test(t))o.fmt='serie';else if(/spot|pubblicit/i.test(t))o.fmt='spot';else if(/videoclip/i.test(t))o.fmt='videoclip';else if(t.trim())o.fmt='cortometraggio';
+  var m=/(?:max|massimo|entro|fino a|di|da)?\s*(\d{1,3})\s*(?:min\b|minut\w*|')/i.exec(t);if(m)o.min=+m[1];
+  if(!o.min&&o.fest48)o.min=7;
+  if(!o.min&&o.fmt==='cortometraggio')o.min=10;
+  if(!o.min&&o.fmt==='lungometraggio')o.min=90;
+  o.kw=t.replace(/[^\wÀ-ÿ\s'’-]/g,' ').split(/\s+/).filter(function(w){return w&&w.length>1&&!IMSTOP.test(w)&&!/^\d+$/.test(w)});
+  return o;
+}
+function imBand(v,lo,hi,soft){if(v>=lo&&v<=hi)return 100;var d=v<lo?lo-v:v-hi;return Math.max(0,Math.round(100-d/soft*100))}
+function imAn(){
+  var B=S.blocks,pages=lines(B)/55,words=0,dw=0,aw=0,dl=0,chars={},c0='',locs={},ns=0,seq=[];
+  B.forEach(function(b){
+    var x=(b.x||'').trim();if(b.t==='n'||!x)return;var n=x.split(/\s+/).length;
+    if(b.t==='s'){ns++;var l=x.replace(/^(INT\.?\/EXT\.?|I\/E\.?|INT\.?|EXT\.?)\s*/i,'').split(/\s+-\s+/)[0].trim().toUpperCase();if(l)locs[l]=1;seq.push({t:'s',n:0,x:x});return}
+    words+=n;if(b.t==='c'){c0=cn(x);if(c0&&!(c0 in chars))chars[c0]=0}
+    if(b.t==='d'){dw+=n;dl++;if(c0)chars[c0]=(chars[c0]||0)+n}
+    if(b.t==='a')aw+=n;seq.push({t:b.t,n:n,x:x});
+  });
+  return {pages:pages,words:words,dw:dw,aw:aw,dl:dl,chars:Object.keys(chars),scenes:ns,locs:Object.keys(locs).length,seq:seq,all:seq.map(function(s){return s.x}).join(' \n ')};
+}
+var IMTENS=/\b(ma|non|mai|basta|no|fermo|fermati|aiuto|urla|urlo|corre|corrono|scappa|fugge|grida|colpisce|spara|paura|morto|morte|sangue|ti prego|bugia|segreto|tradito|vattene|lasciami|subito|presto|attenzione)\b|[?!]/gi;
+function imScore(){
+  var A=imAn(),C=imCtx(),G=IMG[C.genre]||null,im=imS(),R=[];
+  if(A.words<25)return {empty:true,A:A,C:C};
+  var L=C.min||10,mins=A.pages;
+  /* durata */
+  var dur=mins>L?Math.max(0,Math.round(100-(mins-L)/L*250)):imBand(mins,L*.55,L,L*.55);
+  R.push({k:'Durata',w:20,v:dur,d:'≈ '+mins.toFixed(1)+' min di lettura, limite '+L+' min'+(C.min&&!(/\d/.test(im.ctx||''))?' (stimato)':''),
+    tip:mins>L?'Sei oltre il limite: taglia scene o battute. Fuori tempo massimo spesso significa squalifica o penalità.':mins<L*.55?'Hai ancora spazio: puoi sviluppare la svolta o il finale.':''});
+  /* gancio: primi blocchi dopo il titolo */
+  var head=A.seq.slice(0,Math.max(4,Math.round(A.seq.length*.12))),hs=0,ht=head.map(function(s){return s.x}).join(' '),first=head.filter(function(s){return s.t==='a'})[0];
+  if(head.some(function(s){return (s.t==='d'||s.t==='a')&&s.n>=6}))hs+=40;
+  if((ht.match(IMTENS)||[]).length>=1)hs+=30;
+  if(!first||first.n<=45)hs+=30;
+  R.push({k:'Gancio iniziale',w:15,v:hs,d:'cosa succede nel primo 12% del testo',tip:hs<70?'Apri con un’azione, un conflitto o una domanda: evita descrizioni lunghe nelle prime righe.':''});
+  /* dialoghi */
+  var dr=A.words?A.dw/A.words*100:0,band=G?G.dl:[30,60];
+  R.push({k:'Equilibrio dialoghi',w:15,v:imBand(dr,band[0],band[1],30),d:Math.round(dr)+'% dialoghi (tipico '+(G?G.n.toLowerCase():'corto')+': '+band[0]+'–'+band[1]+'%)',
+    tip:dr<band[0]?'Poco dialogo per il genere: va bene se le immagini lavorano, altrimenti dai voce al conflitto.':dr>band[1]?'Molto dialogo: prova a sostituire qualche battuta con un gesto o un’immagine.':''});
+  /* ritmo battute */
+  var avg=A.dl?A.dw/A.dl:0;
+  R.push({k:'Ritmo delle battute',w:10,v:A.dl?imBand(avg,3,14,14):60,d:A.dl?'media '+avg.toFixed(1)+' parole per battuta':'nessun dialogo',tip:avg>14?'Battute lunghe: spezzale, il pubblico ricorda le frasi brevi.':''});
+  /* personaggi */
+  var mx=Math.max(2,Math.ceil(L/1.5)),nc=A.chars.length;
+  R.push({k:'Personaggi',w:10,v:nc===0?55:nc<=mx?100:Math.max(0,100-(nc-mx)*25),d:nc+' con battute (adatti: fino a '+mx+')',tip:nc>mx?'Troppi personaggi per la durata: unisci ruoli, il pubblico non ha il tempo di affezionarsi.':''});
+  /* luoghi */
+  var ml=Math.max(2,Math.round(L/2.5));
+  R.push({k:'Luoghi e scene',w:10,v:A.locs<=ml?100:Math.max(0,100-(A.locs-ml)*22),d:A.locs+' luoghi, '+A.scenes+' scene (adatti: fino a '+ml+' luoghi)',tip:A.locs>ml?'Molti luoghi: in un corto (e a maggior ragione in 48 ore) ogni cambio di set costa tempo.':''});
+  /* tensione e finale */
+  var tot=A.seq.length,th=[0,0,0],tw=[1,1,1];
+  A.seq.forEach(function(s,i){var k=Math.min(2,Math.floor(i/tot*3));tw[k]+=s.n;th[k]+=(s.x.match(IMTENS)||[]).length});
+  var dens=th.map(function(c,k){return c/tw[k]*100}),ts=0;
+  if(dens[0]>0||dens[1]>0)ts+=25;if(dens[2]>=dens[0])ts+=40;if(dens[2]>=dens[1])ts+=20;if(dens[1]>0&&dens[2]>0)ts+=15;
+  R.push({k:'Tensione e finale',w:10,v:ts,d:'conflitto per terzi: '+dens.map(function(x){return x.toFixed(1)}).join(' · '),tip:ts<70?'La tensione dovrebbe crescere verso la fine: evita che il finale sia la parte più «piatta».':''});
+  /* genere */
+  if(G){var hits=(A.all.match(G.lex)||[]).length/Math.max(1,A.words)*100;
+    R.push({k:'Aderenza al genere',w:10,v:Math.min(100,Math.round(hits*28)),d:'segnali tipici di '+G.n.toLowerCase()+' nel testo (indicativo)',tip:hits<2.5?'Il testo non «suona» '+G.n.toLowerCase()+': aggiungi elementi del genere in luoghi, azioni e oggetti.':''})}
+  /* vincoli */
+  var el=im.el||{},cons=[],nt=imNorm(A.all);
+  if(C.fest48||el.char||el.prop||el.line||el.genre){
+    if(el.char){var cn1=imNorm(el.char),ok=!!cn1&&nt.indexOf(cn1)>=0;cons.push({k:'Personaggio',ok:ok?1:0,t:el.char})}
+    if(el.prop){var pn=imNorm(el.prop).split(' ').filter(function(w){return w.length>2}).map(function(w){return w.slice(0,Math.max(4,w.length-2))}),ok2=pn.length&&pn.every(function(w){return nt.indexOf(w)>=0});cons.push({k:'Oggetto',ok:ok2?1:0,t:el.prop})}
+    if(el.line){var ln=imNorm(el.line),ok3=ln&&nt.indexOf(ln)>=0,q=0;if(!ok3&&ln){var ws=ln.split(' ');q=ws.filter(function(w){return nt.indexOf(w)>=0}).length/ws.length}cons.push({k:'Battuta',ok:ok3?1:(q>=.8?.5:0),t:el.line})}
+    if(el.genre){var gk='';Object.keys(IMALIAS).forEach(function(k){if(!gk&&IMALIAS[k].test(el.genre))gk=k});cons.push({k:'Genere',ok:!gk||gk===C.genre?1:0,t:el.genre})}
+    if(cons.length)R.push({k:'Vincoli del festival',w:25,v:Math.round(cons.reduce(function(a,c){return a+c.ok},0)/cons.length*100),d:cons.filter(function(c){return c.ok===1}).length+' su '+cons.length+' elementi obbligatori rispettati',
+      tip:cons.some(function(c){return c.ok<1})?'Controlla gli elementi obbligatori: nelle gare a vincoli sono il primo criterio di valutazione.':'',cons:cons})}
+  var sw=0,sv=0;R.forEach(function(r){sw+=r.w;sv+=r.w*r.v});
+  var conf=Math.min(1,mins/(L*.35));return {total:Math.round(sv/sw*(.5+.5*conf)),short:conf<1?Math.ceil(L*.35):0,rows:R,A:A,C:C,G:G};
+}
+function imCol(v){return v>=75?'var(--cold)':v>=50?'var(--warm)':'var(--danger)'}
+function imLabel(v){return v>=80?'Molto efficace':v>=65?'Solido':v>=45?'Da rafforzare':'Debole'}
+function imRender(){
+  if(!S)return;
+  var out=$('#imOut'),sc0=imScore(),bdg=$('#imScore'),C=sc0.C||imCtx(),im=imS();
+  $('#imEl').hidden=!(C.fest48||im.el.char||im.el.prop||im.el.line||im.el.genre||im.elOpen);
+  var gh='<button type="button" data-g="" aria-pressed="'+(!im.g)+'">Auto'+(!im.g&&C.genre?' · '+IMG[C.genre].n:'')+'</button>';
+  Object.keys(IMG).forEach(function(k){gh+='<button type="button" data-g="'+k+'" aria-pressed="'+(im.g===k)+'">'+IMG[k].n+'</button>'});
+  var chg=$('#imGen');if(chg.dataset.s!==gh){chg.innerHTML=gh;chg.dataset.s=gh}
+  var ctxh='<p class="hint" style="margin:6px 0 0">'+[C.fmt?'Formato: <b>'+esc(C.fmt)+'</b>':'',C.min?'Durata massima: <b>'+C.min+' min</b>':'',C.genre?'Genere: <b>'+esc(IMG[C.genre].n)+'</b>':'',C.fest48?'<b>48 Hour Film Project</b>: genere, personaggio, oggetto e battuta sono assegnati dagli organizzatori':''].filter(Boolean).join(' · ')+'</p>';
+  if(sc0.empty){bdg.textContent='–';bdg.style.color='';out.innerHTML=ctxh+'<p class="empty">Scrivi qualche riga di sceneggiatura: l’indice si calcola mentre scrivi.</p>';imRefs(C);return}
+  bdg.textContent=sc0.total;bdg.style.color=imCol(sc0.total);
+  var h=ctxh+'<div class="imtop"><div class="imring" style="--p:'+sc0.total+';--c:'+imCol(sc0.total)+'"><b>'+sc0.total+'</b></div><div><b class="imlbl">'+imLabel(sc0.total)+'</b>'+(sc0.short?'<p class="hint" style="margin:2px 0 0;text-align:left;color:var(--warm)">Testo ancora breve: il punteggio è prudente e si stabilizza oltre ≈ '+sc0.short+' min.</p>':'')+'<p class="hint" style="margin:2px 0 0;text-align:left">Indice calcolato sul testo che hai scritto, rispetto a ciò che di solito funziona nei corti del genere e alle regole indicate. È una bussola di mestiere, non una previsione di successo.</p></div></div>';
+  h+=sc0.rows.map(function(r){
+    var cs=r.cons?'<div class="imcons">'+r.cons.map(function(c){return '<span class="imc'+(c.ok===1?' ok':c.ok?' mid':'')+'">'+(c.ok===1?'✓':c.ok?'~':'✗')+' '+esc(c.k)+': '+esc(c.t)+'</span>'}).join('')+'</div>':'';
+    return '<div class="imrow"><div class="imh"><span>'+esc(r.k)+'</span><b style="color:'+imCol(r.v)+'">'+r.v+'</b></div><div class="imbar"><i style="width:'+Math.max(2,r.v)+'%;background:'+imCol(r.v)+'"></i></div><small>'+esc(r.d)+'</small>'+cs+(r.tip?'<small class="imtip">→ '+esc(r.tip)+'</small>':'')+'</div>'}).join('');
+  out.innerHTML=h;imRefs(C);
+}
+function imRefs(C){var w=$('#imRefW'),sg=C.genre+'|'+C.fest48+'|'+C.min+'|'+C.kw.join(' ')+'|'+(imKeyYt()?1:0)+'|'+imApiBase();if(w.dataset.s===sg)return;w.dataset.s=sg;w.innerHTML=imRefHtml(C);imBindFetch(C)}
+function imRefHtml(C){
+  var G=IMG[C.genre],q=encodeURIComponent((C.fest48?'48 Hour Film Project ':'')+(G?G.en+' ':'')+'short film'),qi=encodeURIComponent((C.fest48?'48 Hour Film Project ':'')+(C.genre?C.genre+' ':'')+'cortometraggio'),h='<h2 class="sub">Cosa funziona'+(G?' nel '+esc(G.n.toLowerCase()):'')+'</h2>';
+  h+=G?'<ul class="imul">'+G.fx.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul>'+(G.ex.length?'<p class="hint" style="text-align:left">Da studiare: '+G.ex.map(function(e){return '<a href="https://www.youtube.com/results?search_query='+encodeURIComponent(e)+'" target="_blank" rel="noopener">'+esc(e)+'</a>'}).join(' · ')+'</p>':''):'<p class="empty">Scegli un genere (qui sopra o nella barra) per vedere i modelli che funzionano.</p>';
+  h+='<h2 class="sub">Dal web, in tempo reale</h2><div id="imLive"><p class="empty">'+(imCache[imKey(C)]?'':'Scrivi il contesto nella barra e premi Cerca.')+'</p></div>';
+  h+='<div class="chips imlinks"><a class="btn" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query='+qi+'&sp=CAM%253D">YouTube · più visti</a><a class="btn" target="_blank" rel="noopener" href="https://vimeo.com/search?q='+q+'">Vimeo</a><a class="btn" target="_blank" rel="noopener" href="https://www.shortoftheweek.com/?s='+q+'">Short of the Week</a><a class="btn" target="_blank" rel="noopener" href="https://www.google.com/search?q='+encodeURIComponent((C.kw.join(' ')||'cortometraggio')+' vincitori premiati')+'">Vincitori (Google)</a></div>';
+  return h;
+}
+function imKey(C){return [C.kw.join(' '),C.genre,C.fest48,C.min,imKeyYt()?1:0,imApiBase()].join('|')}
+function imBindFetch(C){var k=imKey(C);if(imCache[k])imShow(imCache[k])}
+function imApiBase(){try{return (localStorage.getItem('ciak-im-api')||'').replace(/\/+$/,'')}catch(e){return ''}}
+function imApi(path,params){var b=imApiBase();return fetch(b+path+'?'+new URLSearchParams(params),{signal:imAb&&imAb.signal}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j&&j.error||('errore '+r.status));return j})})}
+function imKeyYt(){try{return localStorage.getItem('ciak-im-yt')||''}catch(e){return ''}}
+function imWiki(lang,q){
+  var u='https://'+lang+'.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent(q)+'&gsrlimit=4&prop=extracts%7Cinfo&exintro=1&explaintext=1&exchars=320&inprop=url&format=json&origin=*';
+  return fetch(u,{signal:imAb&&imAb.signal}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){var p=j&&j.query&&j.query.pages;return p?Object.keys(p).map(function(k){return p[k]}).sort(function(a,b){return a.index-b.index}):[]});
+}
+function imYt(q,key,minutes){
+  var d=minutes&&minutes<4?'short':'medium',u='https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&order=viewCount&videoDuration='+d+'&q='+encodeURIComponent(q)+'&key='+encodeURIComponent(key);
+  return fetch(u,{signal:imAb&&imAb.signal}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j&&j.error&&j.error.message||'errore');return j})}).then(function(j){
+    var ids=(j.items||[]).map(function(i){return i.id&&i.id.videoId}).filter(Boolean);if(!ids.length)return [];
+    return fetch('https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id='+ids.join(',')+'&key='+encodeURIComponent(key),{signal:imAb&&imAb.signal}).then(function(r){return r.json()}).then(function(v){return (v.items||[]).map(function(x){var s=x.statistics||{};return {id:x.id,t:x.snippet.title,ch:x.snippet.channelTitle,v:+s.viewCount||0,l:+s.likeCount||0,c:+s.commentCount||0}}).sort(function(a,b){return b.v-a.v})});
+  });
+}
+function imFmt(n){return n>=1e6?(n/1e6).toFixed(1).replace('.0','')+' M':n>=1e3?(n/1e3).toFixed(1).replace('.0','')+' k':String(n)}
+function imSearch(force){
+  var C=imCtx(),im=imS();if(!im.ctx||im.ctx.trim().length<6&&!C.genre){return}
+  var k=imKey(C);if(imCache[k]&&!force){imShow(imCache[k]);return}
+  var box=$('#imLive');if(!box)return;box.innerHTML='<p class="empty">Cerco…</p>';
+  if(imAb)try{imAb.abort()}catch(e){}imAb=window.AbortController?new AbortController():null;
+  var G=IMG[C.genre],fq=C.fest48?'48 Hour Film Project':C.kw.slice(0,6).join(' '),gq=(G?G.en+' ':'')+'short film awards',yk=imKeyYt(),res={fest:[],genre:[],yt:null,err:''};
+  var P=[];
+  var ab=imApiBase();
+  if(ab){
+    var wq=(C.fest48?'48 Hour Film Project Roma':fq)+' cortometraggi vincitori premiati';
+    P.push(imApi('/api/web',{q:wq}).then(function(r){res.web=r.results||[]}).catch(function(e){res.err='Server di ricerca: '+(e&&e.message||'errore')}));
+    if(G)P.push(imApi('/api/web',{q:G.en+' short film award winners most acclaimed'}).then(function(r){res.web2=r.results||[]}).catch(function(){}));
+    if(!yk)P.push(imApi('/api/yt',{q:((C.fest48?'48 Hour Film Project ':'')+(G?G.en+' ':'')+'short film').trim(),min:C.min||0}).then(function(r){res.yt=r.results||[]}).catch(function(){}));
+  }
+  if(fq)P.push(imWiki('it',fq).then(function(r){res.fest=r}).catch(function(){res.err='Wikipedia non raggiungibile'}));
+  P.push(imWiki('en',gq).then(function(r){res.genre=r}).catch(function(){res.err='Wikipedia non raggiungibile'}));
+  if(yk)P.push(imYt(((fq&&!C.fest48?fq+' ':C.fest48?fq+' ':'')+(G?G.en+' ':'')+'short film').trim(),yk,C.min).then(function(r){res.yt=r}).catch(function(e){res.yt=null;res.err=(res.err?res.err+' · ':'')+'YouTube: '+(e&&e.message||'errore')}));
+  Promise.all(P).then(function(){imCache[k]=res;imShow(res)});
+}
+function imShow(res){
+  var box=$('#imLive');if(!box)return;
+  var card=function(p){return '<a class="imref" target="_blank" rel="noopener" href="'+esc(p.fullurl||'#')+'"><b>'+esc(p.title)+'</b><span>'+esc((p.extract||'').replace(/\s+/g,' ').slice(0,260))+'</span></a>'};
+  var h='';
+  var wcard=function(x){return '<a class="imref" target="_blank" rel="noopener" href="'+esc(x.url)+'"><b>'+esc(x.title)+'</b><span>'+esc(String(x.description||'').slice(0,260))+(x.age?' · '+esc(x.age):'')+'</span></a>'};
+  if(res.web&&res.web.length)h+='<h3 class="imh3">Dal web (Brave)</h3>'+res.web.map(wcard).join('');
+  if(res.web2&&res.web2.length)h+='<h3 class="imh3">Film premiati del genere</h3>'+res.web2.map(wcard).join('');
+  if(res.fest&&res.fest.length)h+='<h3 class="imh3">Contesto / festival</h3>'+res.fest.map(card).join('');
+  if(res.genre&&res.genre.length)h+='<h3 class="imh3">Film e premi del genere</h3>'+res.genre.map(card).join('');
+  if(res.yt&&res.yt.length)h+='<h3 class="imh3">Più visti su YouTube</h3>'+res.yt.map(function(v){var er=v.v?(v.l/v.v*100).toFixed(1)+'% like':'';return '<a class="imref" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v='+esc(v.id)+'"><b>'+esc(v.t)+'</b><span>'+esc(v.ch)+' · '+imFmt(v.v)+' visualizzazioni · '+imFmt(v.c)+' commenti'+(er?' · '+er:'')+'</span></a>'}).join('');
+  else if(!imKeyYt()&&!imApiBase())h+='<p class="hint" style="text-align:left">Per vedere visualizzazioni, like e commenti dei corti più visti inserisci una chiave YouTube Data API (gratuita) in «Fonti».</p>';
+  if(res.err)h+='<p class="hint" style="text-align:left;color:var(--danger)">'+esc(res.err)+'</p>';
+  if(!h)h='<p class="empty">Nessun risultato: prova a descrivere meglio il contesto.</p>';
+  box.innerHTML=h;
+}
+function imLive(){clearTimeout(imTm);imTm=setTimeout(imRender,350)}
+function imInit(){
+  var im=imS();$('#imCtx').value=im.ctx||'';
+  ['char','prop','line','genre'].forEach(function(k){$('#imE-'+k).value=im.el[k]||''});
+  var yk=$('#imYt');if(yk)yk.value=imKeyYt();var ap=$('#imApi');if(ap)ap.value=imApiBase();imRender();
+}
+$('#imCtx').addEventListener('input',function(){imS().ctx=this.value;ss();imRender();clearTimeout(imFt);imFt=setTimeout(function(){imSearch()},1100)});
+$('#imCtx').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();clearTimeout(imFt);imSearch(true)}});
+$('#imGo').addEventListener('click',function(){clearTimeout(imFt);imSearch(true)});
+$('#imElBtn').addEventListener('click',function(){var im=imS();im.elOpen=!im.elOpen;imRender()});
+$('#imEl').addEventListener('input',function(e){var k=e.target.id.replace('imE-','');if(k){imS().el[k]=e.target.value;ss();imLive()}});
+$('#imGen').addEventListener('click',function(e){var b=e.target.closest('[data-g]');if(!b)return;imS().g=b.dataset.g;ss();imRender();imSearch()});
+$('#imApi').addEventListener('change',function(){var v=this.value.trim();try{if(v)localStorage.setItem('ciak-im-api',v);else localStorage.removeItem('ciak-im-api')}catch(e){}imCache={};$('#imApiS').textContent='';imRender();imSearch(true)});
+$('#imApiT').addEventListener('click',function(){var s=$('#imApiS'),v=$('#imApi').value.trim();try{if(v)localStorage.setItem('ciak-im-api',v)}catch(e){}s.textContent='Provo…';s.style.color='';imApi('/api/ping',{}).then(function(r){s.textContent='Collegato'+(r.brave?' · Brave attivo':' · manca la chiave Brave')+(r.youtube?' · YouTube attivo':'');s.style.color=r.brave?'var(--cold)':'var(--warm)'}).catch(function(e){s.textContent='Non raggiungibile: '+(e&&e.message||'errore')+'. Controlla l\u2019indirizzo e ALLOWED_ORIGINS nel Worker.';s.style.color='var(--danger)'})});
+$('#imYt').addEventListener('change',function(){try{if(this.value.trim())localStorage.setItem('ciak-im-yt',this.value.trim());else localStorage.removeItem('ciak-im-yt')}catch(e){}imCache={};imRender();imSearch(true)});
+
 /* ---- viste e progetti ---- */
 function tb(t){
   ['testo','schede','ricerca','mappe','stat'].forEach(function(k){$('#swP-'+k).hidden=k!==t});
   $$('#swTabs button').forEach(function(b){b.setAttribute('aria-selected',b.dataset.tb===t)});
-  if(t==='testo')rB();if(t==='schede')rC();if(t==='ricerca')rR();if(t==='stat')rS();if(t==='mappe')mmR();
+  if(t==='testo'){rB();imInit()}if(t==='schede')rC();if(t==='ricerca')rR();if(t==='stat')rS();if(t==='mappe')mmR();
 }
 $('#swTabs').addEventListener('click',function(e){var b=e.target.closest('[data-tb]');if(b)tb(b.dataset.tb)});
 $('#swTitle').addEventListener('input',function(){S.title=this.value;ss()});
