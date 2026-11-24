@@ -468,7 +468,7 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
 .edhead input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:14px;color:var(--ink);min-width:0}
 .edhead input::placeholder{color:var(--muted);opacity:1;font-style:italic}
 .edwrap{padding:0;overflow:auto;max-height:calc(100vh - 150px)}
-#edTable{border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:13px;width:100%;min-width:1316px}
+#edTable{border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:13px;width:100%;min-width:1476px}
 #edTable th{position:sticky;z-index:2;background:var(--surface2);font-family:var(--font-display);text-transform:uppercase;letter-spacing:.05em;font-size:13px;font-weight:600;color:var(--muted);padding:6px 4px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);text-align:center;line-height:1.15}
 #edTable tr.g1 th{top:0;height:32px;color:var(--ink);font-size:14px;box-sizing:border-box}
 #edTable tr.g2 th{top:32px}
@@ -483,6 +483,10 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
 .edrowb button{border:0;background:transparent;color:var(--muted);font-size:16px;line-height:1;padding:0 4px;cursor:pointer}
 .edrowb button:hover{color:var(--accent)}.edrowb button[data-rm]:hover{color:#d33}
 #edPrint{display:none}
+.edgir{margin-bottom:14px}.edgir .r1{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}.edgir .r1 p{margin:0}.edgopt{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;font-size:13px}.edgopt label{display:flex;gap:6px;align-items:center}
+.gprog{margin-top:8px;font-size:13px;color:var(--muted)}.gsum{margin:10px 0 4px}.gok{color:var(--cold)}.gbad{color:var(--danger)}
+.gtab{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:6px}.grow{display:grid;grid-template-columns:70px 100px 1fr 70px 130px;gap:8px;padding:5px 10px;border-bottom:1px solid var(--line);font-size:12px}.grow .gnm{font-family:var(--font-mono);overflow-wrap:anywhere}
+.mob .edgir{display:none}
 .mob .edmod,.mob .edrowb{display:none!important}
 @media print{
   body.pr-ed>*:not(#edPrint){display:none!important}
@@ -902,6 +906,13 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
       <p class="hint">Bollettino d'edizione: compila l'intestazione e una riga per ogni ripresa. Ogni pagina ha 18 righe, come il modulo stampato; la numerazione «Pag. X di N» si calcola da sola. Il PDF e la stampa sono in A4 orizzontale. «Precompila dalla shotlist» aggiunge scena/quadro e descrizione di ogni inquadratura che non c'è ancora. Con «+» inserisci una riga sotto quella scelta, con «×» la togli.</p>
     </div>
     <div class="card edhead" id="edHead"></div>
+    <div class="card edgir" id="edGir">
+      <div class="r1"><p><b>Girato</b> · <span id="edGirInfo">Nessuna cartella collegata</span></p>
+        <div class="grp"><button class="btn" id="edGirPick">Collega la cartella del girato</button><button class="btn" id="edGirUnlink" hidden>Scollega</button><button class="btn" id="edGirCheck" title="Cerca nella cartella i file segnati sul bollettino, senza copiare niente">Controlla file</button><button class="btn primary" id="edGirExtract" title="Copia i file buoni in una nuova cartella «girato - titolo»">Estrai il girato buono</button><button class="btn danger" id="edGirStop" hidden>Interrompi</button></div></div>
+      <div class="edgopt" id="edGirOpt"><label><input type="checkbox" id="edGirScn" checked> dividi in cartelle per scena</label><label><input type="checkbox" id="edGirRes"> includi anche le riserve</label></div>
+      <p class="hint" style="margin:6px 0 0;text-align:left">Scrivi il nome del file nella colonna «File» (più nomi separati da virgola, per esempio video e audio). Senza estensione l'app prende tutti i file con quel nome. Estrae le riprese segnate «Buona» e crea la cartella «girato - titolo» nella posizione che scegli. Gli originali non vengono toccati.</p>
+      <div id="edGirProg" class="gprog" hidden></div><div id="edGirOut"></div>
+    </div>
     <div class="card edwrap" id="edWrap"></div>
   </main>
 </div>
@@ -5258,11 +5269,11 @@ var ED_N=18,ED_F=['cass','ord','vsc','vnum','vbs','nas','bra','ssc','snum','sbs'
 var ED_HEAD=[['prod','Produzione'],['date','Data'],['film','Film'],['reg','Regia'],['op','Operatore'],['fon','Fonico'],['seg','Segr. edizione']];
 var ED_GH=[['N. cass./ rullo','N. ordine registr.','Scena/ quadro','Numero ciak','Buona riserva scarto'],['N. nastro/ disco','N. ordine brano','Scena/ quadro','Numero ciak','Buona riserva scarto']];
 var ED_MM=[8,17,17,16,14,18,17,17,16,14,18,60,49]; /* larghezze in mm sul PDF e sulla stampa: in tutto 281 mm */
-var ED_PX=[56,78,78,78,78,78,78,78,78,78,78,240,240]; /* larghezze sullo schermo */
+var ED_PX=[56,78,78,78,78,78,78,78,78,78,78,240,240,160]; /* larghezze sullo schermo */
 var ED_JSPDF='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 function edToday(){var t=new Date(),p=function(n){return ('0'+n).slice(-2)};return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate())}
-function edRow(r){var o={};r=r||{};ED_F.forEach(function(k){o[k]=String(r[k]==null?'':r[k]).slice(0,2000)});if(r.pid)o.pid=String(r.pid).slice(0,40);return o}
-function edEmpty(r){return ED_F.every(function(k){return !r[k]})}
+function edRow(r){var o={};r=r||{};ED_F.forEach(function(k){o[k]=String(r[k]==null?'':r[k]).slice(0,2000)});if(r.pid)o.pid=String(r.pid).slice(0,40);if(r.file)o.file=String(r.file).slice(0,300);return o}
+function edEmpty(r){return !r.file&&ED_F.every(function(k){return !r[k]})}
 function edPad(rows){while(!rows.length||rows.length%ED_N)rows.push(edRow());return rows}
 function edNorm(e){
   e=(e&&typeof e==='object'&&!Array.isArray(e))?e:{};
@@ -5287,10 +5298,10 @@ function renderEd(){
   }).join('');
   edStats();
   var h='<table id="edTable"><colgroup>'+ED_PX.map(function(w){return '<col style="width:'+w+'px">'}).join('')+'</colgroup>'+
-    '<thead><tr class="g1"><th class="sn" rowspan="2">N°</th><th colspan="5">Visivo</th><th colspan="5">Sonoro</th><th rowspan="2">Descrizione</th><th rowspan="2">Annotazioni</th></tr><tr class="g2">'+
+    '<thead><tr class="g1"><th class="sn" rowspan="2">N°</th><th colspan="5">Visivo</th><th colspan="5">Sonoro</th><th rowspan="2">Descrizione</th><th rowspan="2">Annotazioni</th><th rowspan="2" title="Nome del file della ripresa (solo sullo schermo: non è nel PDF né nella stampa)">File</th></tr><tr class="g2">'+
     ED_GH[0].concat(ED_GH[1]).map(function(t){return '<th>'+esc(t)+'</th>'}).join('')+'</tr></thead><tbody>';
   E.rows.forEach(function(r,i){
-    if(i%ED_N===0)h+='<tr class="sg"><td colspan="13">Pagina '+(i/ED_N+1)+' di '+np+'</td></tr>';
+    if(i%ED_N===0)h+='<tr class="sg"><td colspan="14">Pagina '+(i/ED_N+1)+' di '+np+'</td></tr>';
     h+='<tr data-i="'+i+'"><td class="sn"><b>'+(i+1)+'</b><span class="edrowb"><button type="button" data-ins="'+i+'" title="Inserisci una riga sotto questa" aria-label="Inserisci una riga sotto la riga '+(i+1)+'">+</button><button type="button" data-rm="'+i+'" title="Togli questa riga" aria-label="Togli la riga '+(i+1)+'">×</button></span></td>';
     ED_F.forEach(function(k){
       var v=r[k]||'';
@@ -5298,11 +5309,12 @@ function renderEd(){
       else if(k==='desc'||k==='ann')h+='<td><textarea data-f="'+k+'" rows="2">'+esc(v)+'</textarea></td>';
       else h+='<td><input type="text" data-f="'+k+'" value="'+esc(v)+'"></td>';
     });
-    h+='</tr>';
+    h+='<td><input type="text" data-f="file" value="'+esc(r.file||'')+'" placeholder="es. A001_C003" aria-label="Nome file della ripresa"></td></tr>';
   });
   wrap.innerHTML=h+'</tbody></table>';
   wrap.scrollLeft=sx;wrap.scrollTop=sy;
   if(MOB){lockForms(wrap);lockForms($('#edHead'))}
+  edGirRender();
 }
 function edSet(t,fin){
   var k=t.dataset.f,tr=t.closest('tr[data-i]');if(!k||!tr||!S||!S.ed)return;
@@ -5479,6 +5491,150 @@ $('#edHubList').addEventListener('click',function(ev){
   }
   var o=ev.target.closest('[data-edo]');if(o)openProject(o.dataset.edo,'ed')});
 window.__ciakEd={hub:edHubRender};
+
+/* ---------- girato: collega la cartella delle riprese, controlla i file segnati sul bollettino ed estrae il girato buono ---------- */
+var GIR_FS=typeof window.showDirectoryPicker==='function',girFor=null,girDir=null,girPerm='',girBusy=false,girStop=false,girIdx=null;
+function girDb(){return new Promise(function(res,rej){var r=indexedDB.open('ciak-girato',1);r.onupgradeneeded=function(){r.result.createObjectStore('h')};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
+function girSave(id,h){return girDb().then(function(db){return new Promise(function(res){var t=db.transaction('h','readwrite'),s=t.objectStore('h');if(h)s.put(h,id);else s.delete(id);t.oncomplete=function(){res()};t.onerror=function(){res()}})}).catch(function(){})}
+function girLoad(id){return girDb().then(function(db){return new Promise(function(res){var q=db.transaction('h').objectStore('h').get(id);q.onsuccess=function(){res(q.result||null)};q.onerror=function(){res(null)}})}).catch(function(){return null})}
+function girSafe(s){return String(s||'').replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,'-').replace(/\s+/g,' ').trim().replace(/[. ]+$/,'')||'senza nome'}
+function girFmt(n){return n>=1e9?(n/1e9).toFixed(1)+' GB':n>=1e6?(n/1e6).toFixed(1)+' MB':n>=1e3?Math.round(n/1e3)+' kB':n+' B'}
+function girNames(s){return String(s||'').split(/[\n,;]+/).map(function(x){return x.trim().split(/[\\\/]/).pop().trim()}).filter(Boolean)}
+function girHasExt(n){return /\.[A-Za-z0-9]{1,5}$/.test(n)}
+function girBase(n){return n.replace(/\.[A-Za-z0-9]{1,5}$/,'')}
+function girScene(r){
+  var v=String(r.vsc||'').trim()||String(r.ssc||'').trim();if(!v)return 'Senza scena';
+  if(v.indexOf('/')>=0)v=v.split('/')[0].trim();else v=v.replace(/^(.*\d)[A-Za-z]{1,2}$/,'$1');
+  v=v||'Senza scena';return /^\d+$/.test(v)?'Scena '+('0'+v).slice(-Math.max(2,v.length)):(v==='Senza scena'?v:'Scena '+v);
+}
+/* righe da estrarre: con un nome file e segnate «Buona» (o «Riserva», se richiesto) */
+function girRows(){
+  var inc=$('#edGirRes').checked,E=edEnsure(),out=[],noEsito=0;
+  E.rows.forEach(function(r,i){
+    var nm=girNames(r.file);if(!nm.length)return;
+    var es=[r.vbs,r.sbs],ok=es.indexOf('Buona')>=0||(inc&&es.indexOf('Riserva')>=0);
+    if(!es.some(Boolean)){noEsito++;return}
+    if(ok)out.push({i:i,r:r,names:nm,scene:girScene(r),esito:es.indexOf('Buona')>=0?'Buona':'Riserva'});
+  });
+  out.noEsito=noEsito;return out;
+}
+async function girScan(dir,onProg){
+  var byFull={},byBase={},n=0;
+  async function walk(d,path){
+    for await(var e of d.values()){
+      if(girStop)return;
+      if(e.kind==='directory'){if(e.name[0]!=='.')await walk(e,path+e.name+'/')}
+      else if(e.name[0]!=='.'){
+        var k=e.name.toLowerCase(),b=girBase(k),o={h:e,path:path+e.name,name:e.name};
+        (byFull[k]=byFull[k]||[]).push(o);(byBase[b]=byBase[b]||[]).push(o);
+        if(++n%200===0&&onProg)onProg(n);
+      }
+    }
+  }
+  await walk(dir,'');return {byFull:byFull,byBase:byBase,n:n};
+}
+function girFind(idx,name){
+  var k=name.toLowerCase();
+  if(girHasExt(name)&&idx.byFull[k])return idx.byFull[k];
+  return idx.byBase[k]||idx.byBase[girBase(k)]||idx.byFull[k]||[];
+}
+async function girPerms(h,mode){
+  try{var o={mode:mode};if(await h.queryPermission(o)==='granted')return true;return (await h.requestPermission(o))==='granted'}catch(e){return false}
+}
+function girInfo(msg){$('#edGirInfo').textContent=msg}
+async function edGirRender(){
+  var box=$('#edGir');if(!box||!S)return;
+  if(!GIR_FS){box.querySelector('.grp').hidden=true;$('#edGirOpt').hidden=true;girInfo('Serve Chrome o Edge su computer per collegare una cartella');return}
+  var id=curId;if(girFor!==id){girFor=id;girDir=await girLoad(id);girIdx=null;$('#edGirOut').innerHTML=''}
+  if(!girDir){girInfo('Nessuna cartella collegata');$('#edGirPick').textContent='Collega la cartella del girato';$('#edGirUnlink').hidden=true;return}
+  $('#edGirPick').textContent='Cambia cartella';$('#edGirUnlink').hidden=false;
+  var p='';try{p=await girDir.queryPermission({mode:'read'})}catch(e){}
+  girInfo('Cartella collegata: «'+girDir.name+'»'+(p==='granted'?'':' · riautorizza l’accesso con «Controlla file»'));
+}
+async function girEnsureIndex(){
+  if(!girDir){toast('Collega prima la cartella del girato');return null}
+  if(!(await girPerms(girDir,'read'))){toast('Accesso alla cartella non concesso');return null}
+  if(girIdx)return girIdx;
+  girStop=false;girInfo('Leggo la cartella…');
+  girIdx=await girScan(girDir,function(n){girInfo('Leggo la cartella… '+n+' file')});
+  girInfo('Cartella «'+girDir.name+'»: '+girIdx.n+' file letti');return girIdx;
+}
+async function girMatch(idx,sel){
+  var res=[];
+  for(var s of sel){
+    for(var nm of s.names){
+      var f=girFind(idx,nm),size=0;
+      for(var o of f){try{size+=(await o.h.getFile()).size}catch(e){}}
+      res.push({sel:s,name:nm,found:f,size:size});
+    }
+  }
+  return res;
+}
+function girReport(res,sel,note){
+  var ok=res.filter(function(x){return x.found.length}),miss=res.filter(function(x){return !x.found.length}),size=ok.reduce(function(a,x){return a+x.size},0),h='';
+  h+='<p class="gsum"><b>'+ok.length+'</b> '+(ok.length===1?'nome trovato':'nomi trovati')+' su '+res.length+' · '+girFmt(size)+(miss.length?' · <span class="gbad">'+miss.length+' non trovat'+(miss.length===1?'o':'i')+'</span>':'')+'</p>';
+  if(note)h=note+h;
+  if(sel.noEsito)h+='<p class="hint" style="text-align:left">'+sel.noEsito+(sel.noEsito===1?' riga ha':' righe hanno')+' un nome file ma nessun esito (Buona/Riserva/Scarto): non '+(sel.noEsito===1?'è inclusa':'sono incluse')+'.</p>';
+  if(res.some(function(x){return x.found.length>1}))h+='<p class="hint" style="text-align:left">Alcuni nomi corrispondono a più file (per esempio video e audio con lo stesso nome, oppure doppioni in cartelle diverse): vengono copiati tutti. Per sceglierne uno solo scrivi il nome con l\u2019estensione.</p>';
+  h+='<div class="gtab">'+res.map(function(x){
+    var st=x.found.length?'<span class="gok">trovato'+(x.found.length>1?' ('+x.found.length+' file)':'')+'</span>':'<span class="gbad">non trovato</span>';
+    return '<div class="grow"><span>riga '+(x.sel.i+1)+'</span><span>'+esc(x.sel.scene)+'</span><span class="gnm">'+esc(x.name)+'</span><span>'+esc(x.sel.esito)+'</span>'+st+'</div>'}).join('')+'</div>';
+  $('#edGirOut').innerHTML=h;
+}
+$('#edGirPick').addEventListener('click',async function(){
+  if(!GIR_FS||girBusy)return;
+  var h;try{h=await window.showDirectoryPicker({id:'ciak-girato-src',mode:'read'})}catch(e){return}
+  girDir=h;girIdx=null;await girSave(curId,h);$('#edGirOut').innerHTML='';
+  $('#edGirPick').textContent='Cambia cartella';$('#edGirUnlink').hidden=false;girInfo('Cartella collegata: «'+h.name+'»');
+});
+$('#edGirUnlink').addEventListener('click',async function(){if(girBusy)return;girDir=null;girIdx=null;await girSave(curId,null);edGirRender()});
+$('#edGirCheck').addEventListener('click',async function(){
+  if(girBusy)return;var sel=girRows();
+  if(!sel.length){$('#edGirOut').innerHTML='<p class="empty">Nessuna riga da cercare: scrivi il nome del file nella colonna «File» e segna la ripresa come «Buona».</p>';return}
+  girBusy=true;girIdx=null;try{var idx=await girEnsureIndex();if(!idx)return;girReport(await girMatch(idx,sel),sel)}finally{girBusy=false}
+});
+$('#edGirStop').addEventListener('click',function(){girStop=true});
+$('#edGirExtract').addEventListener('click',async function(){
+  if(girBusy)return;var sel=girRows();
+  if(!sel.length){$('#edGirOut').innerHTML='<p class="empty">Nessuna riga da estrarre: scrivi il nome del file nella colonna «File» e segna la ripresa come «Buona».</p>';return}
+  girBusy=true;girStop=false;girIdx=null;var prog=$('#edGirProg');
+  try{
+    var idx=await girEnsureIndex();if(!idx)return;
+    var res=await girMatch(idx,sel),ok=res.filter(function(x){return x.found.length});
+    if(!ok.length){girReport(res,sel);toast('Nessun file trovato nella cartella');return}
+    var parent;try{parent=await window.showDirectoryPicker({id:'ciak-girato-dst',mode:'readwrite'})}catch(e){return}
+    var title=(S.ed&&S.ed.head&&S.ed.head.film)||S.title||'progetto',root=await parent.getDirectoryHandle('girato - '+girSafe(title),{create:true}),
+        split=$('#edGirScn').checked,total=ok.reduce(function(a,x){return a+x.size},0),done=0,copied=0,skipped=0,fails=[],log=[],last=0;
+    $('#edGirStop').hidden=false;prog.hidden=false;
+    var seen={};
+    outer:for(var x of ok){
+      var dir=root;if(split)dir=await root.getDirectoryHandle(girSafe(x.sel.scene),{create:true});
+      for(var o of x.found){
+        if(girStop)break outer;
+        var f=await o.h.getFile(),nm=girSafe(o.name),dk=(split?x.sel.scene:'')+'/'+nm.toLowerCase();
+        if(seen[dk]&&seen[dk]!==o.path){var dot=nm.lastIndexOf('.');nm=(dot>0?nm.slice(0,dot):nm)+' ('+(o.path.split('/').slice(-2,-1)[0]||'2')+')'+(dot>0?nm.slice(dot):'')}
+        seen[dk]=o.path;
+        var exist=null;try{exist=await (await dir.getFileHandle(nm)).getFile()}catch(e){}
+        if(exist&&exist.size===f.size&&exist.lastModified>=f.lastModified-2000){skipped++;done+=f.size;log.push([x.sel.scene,nm,'già presente',o.path]);continue}
+        try{
+          var fh=await dir.getFileHandle(nm,{create:true}),w=await fh.createWritable(),rd=f.stream().getReader();
+          try{for(;;){if(girStop){await w.abort();break outer}var c=await rd.read();if(c.done)break;await w.write(c.value);done+=c.value.length;
+            var now=Date.now();if(now-last>150){last=now;prog.innerHTML='<b>'+Math.round(done/Math.max(1,total)*100)+'%</b> · '+girFmt(done)+' di '+girFmt(total)+' · '+esc(nm)}}
+            await w.close();copied++;log.push([x.sel.scene,nm,'copiato',o.path])}
+          catch(e){try{await w.abort()}catch(_){}throw e}
+        }catch(e){fails.push(nm);log.push([x.sel.scene,nm,'ERRORE '+(e&&e.message||''),o.path])}
+      }
+    }
+    var miss=res.filter(function(x){return !x.found.length});
+    var txt='Girato «'+title+'» · '+new Date().toLocaleString()+'\nCartella di origine: '+girDir.name+'\n\n'+log.map(function(l){return l.join(' | ')}).join('\n')+(miss.length?'\n\nNON TROVATI:\n'+miss.map(function(x){return 'riga '+(x.sel.i+1)+' | '+x.sel.scene+' | '+x.name}).join('\n'):'')+'\n';
+    try{var rf=await root.getFileHandle('_elenco-girato.txt',{create:true}),rw=await rf.createWritable();await rw.write(txt);await rw.close()}catch(e){}
+    prog.hidden=true;
+    girReport(res,sel,'<p class="gsum">'+(girStop?'Interrotto · ':'Fatto · ')+'<b>'+copied+'</b> copiati'+(skipped?' · '+skipped+' già presenti':'')+(fails.length?' · <span class="gbad">'+fails.length+' con errore</span>':'')+' in «girato - '+esc(girSafe(title))+'» (gli originali non sono stati toccati; l’elenco è in _elenco-girato.txt)</p>');
+    toast(girStop?'Estrazione interrotta':'Girato estratto: '+copied+' file');
+  }catch(e){toast('Errore: '+(e&&e.message||'operazione non riuscita'))}
+  finally{girBusy=false;girStop=false;$('#edGirStop').hidden=true;prog.hidden=true}
+});
+
 
 /* ---------- dati e progetto ---------- */
 $('#btnData').addEventListener('click',function(){
