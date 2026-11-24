@@ -1,0 +1,8 @@
+name = "ciak-search"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+[vars]
+# Indirizzi da cui l'app può chiamare il Worker (separati da virgola, senza / finale).
+# Cambiali con il tuo indirizzo reale prima di pubblicare.
+ALLOWED_ORIGINS = "https://alessiomorrone11-tech.github.io"
