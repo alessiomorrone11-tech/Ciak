@@ -482,6 +482,12 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
 .edrowb{display:flex;justify-content:center;gap:2px;margin-top:2px}
 .edrowb button{border:0;background:transparent;color:var(--muted);font-size:16px;line-height:1;padding:0 4px;cursor:pointer}
 .edrowb button:hover{color:var(--accent)}.edrowb button[data-rm]:hover{color:#d33}
+/* suggerimento fantasma nella colonna «File»: il testo già scritto è invisibile, resta solo il completamento in grigio */
+#edTable td.fl{position:relative}
+.edgh{position:absolute;pointer-events:none;white-space:pre;overflow:hidden;box-sizing:border-box;border:1px solid transparent;z-index:1}
+.edgh i{font-style:normal;visibility:hidden}.edgh b{font-weight:inherit;color:var(--muted);opacity:.85}
+#edTable td.gh-on input::placeholder{color:transparent}
+@media print{.edgh{display:none!important}}
 #edPrint{display:none}
 .edgir{margin-bottom:14px}.edgir .grp{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.edgir .r1{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}.edgir .r1 p{margin:0}.edgopt{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;font-size:13px}.edgopt label{display:flex;gap:6px;align-items:center}
 .gprog{margin-top:8px;font-size:13px;color:var(--muted)}.gsum{margin:10px 0 4px}.gok{color:var(--cold)}.gbad{color:var(--danger)}
@@ -686,6 +692,7 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
   <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 017.5-2"/></symbol>
   <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></symbol>
   <symbol id="i-wall" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12"/><path d="M3 12h18M9 6v6M15 12v6"/></symbol>
+  <symbol id="i-sdoor" viewBox="0 0 24 24"><path d="M3 21h18M3 4v17M21 4v17M3 4h18M12 4v17"/><path d="M8.5 12h-3M7 10.5 5.5 12 7 13.5"/></symbol>
   <symbol id="i-door" viewBox="0 0 24 24"><path d="M6 21V4h12v17M4 21h16"/><circle cx="15" cy="13" r=".8"/></symbol>
   <symbol id="i-win" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M12 4v16M4 12h16"/></symbol>
   <symbol id="i-room" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1" stroke-dasharray="3 2"/><path d="M3 12h7M14 12h7"/></symbol>
@@ -834,6 +841,7 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
       <div class="stagebox"><svg id="stage" viewBox="0 0 1200 800" role="img" aria-label="Pianta della scena"></svg></div>
       <div class="chips" id="chips"></div>
       <p class="hint">Trascina gli elementi per spostarli. Il cerchio sul bordo dell'elemento selezionato ruota la direzione. Il cono azzurro mostra il campo visivo della camera (con la camera a piombo diventa il rettangolo ripreso). I livelli sopra la scena servono a non sovrapporre le cose: l'occhio nasconde un tipo di elemento, il lucchetto lo rende non selezionabile, il nome lo isola (gli altri restano sfumati e non si toccano). I cerchi numerati sono le tappe del percorso: premi una tappa e la camera si sposta lì, come un fotogramma chiave. Trascinala per spostare la tappa, usa il cerchio per ruotarla col mouse: tutto si salva nella tappa. «Partenza» torna alla posizione iniziale. Muri, porte e finestre: «Stanza» crea i quattro muri attorno alla scena; avvicinando una stanza a un'altra si aggancia e i due muri diventano uno solo (tieni Alt per spostarla senza aggancio), «Muro» ne aggiunge uno singolo, porte e finestre si agganciano al muro più vicino e lo bucano; in 3D si vedono con spessore, aperture e anta. Rotella del mouse: zoom; per spostare la vista tieni premuto Spazio (o il tasto centrale o destro) e trascina. Trascina sullo sfondo, o dentro una stanza, per selezionare più elementi con il rettangolo; Maiusc o Ctrl + clic aggiunge un elemento. Ctrl+C / Ctrl+V copiano e incollano la selezione, Ctrl+G la raggruppa.</p>
+      <p class="hint" style="margin-top:6px">Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.</p>
     </section>
 
     <div class="side">
@@ -910,7 +918,7 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
       <div class="r1"><p><b>Girato</b> · <span id="edGirInfo">Nessuna cartella collegata</span></p>
         <div class="grp"><button class="btn" id="edGirPick">Collega la cartella del girato</button><button class="btn" id="edGirUnlink" hidden>Scollega</button><button class="btn" id="edGirCheck" title="Cerca nella cartella i file segnati sul bollettino, senza copiare niente">Controlla file</button><button class="btn primary" id="edGirExtract" title="Copia i file buoni in una nuova cartella «girato - titolo»">Estrai il girato buono</button><button class="btn danger" id="edGirStop" hidden>Interrompi</button></div></div>
       <div class="edgopt" id="edGirOpt"><label><input type="checkbox" id="edGirScn" checked> dividi in cartelle per scena</label><label><input type="checkbox" id="edGirRes"> includi anche le riserve</label></div>
-      <p class="hint" style="margin:6px 0 0;text-align:left">Scrivi il nome del file nella colonna «File» (più nomi separati da virgola, per esempio video e audio). Senza estensione l'app prende tutti i file con quel nome. Estrae le riprese segnate «Buona» e crea la cartella «girato - titolo» nella posizione che scegli. Gli originali non vengono toccati.</p>
+      <p class="hint" style="margin:6px 0 0;text-align:left">Scrivi il nome del file nella colonna «File» (più nomi separati da virgola, per esempio video e audio). Senza estensione l'app prende tutti i file con quel nome. Mentre scrivi in «File» compare in grigio il nome successivo (dopo A001_C001 propone A001_C002; con la cartella collegata completa anche con i file che ci sono davvero): Invio o freccia destra lo accetta, Esc lo scarta; «Controlla file» rilegge la cartella. Estrae le riprese segnate «Buona» e crea la cartella «girato - titolo» nella posizione che scegli. Gli originali non vengono toccati.</p>
       <div id="edGirProg" class="gprog" hidden></div><div id="edGirOut"></div>
     </div>
     <div class="card edwrap" id="edWrap"></div>
@@ -1152,7 +1160,7 @@ function mk(type,o){
     light:{name:'Luce',on:true,kelvin:3200,intensity:70,spread:70,role:'key',kind:'led',color:''},
     room:{name:'Stanza',w:5,d:4,h:2.8,walls:false},
     wall:{name:'Muro',len:3,th:0.15,h:2.8,rid:'',side:''},
-    door:{name:'Porta',w:0.9,h:2.05,open:0,hinge:'l',side:1},
+    door:{name:'Porta',w:0.9,h:2.05,open:0,hinge:'l',side:1,kind:'hinged'},
     win:{name:'Finestra',w:1.2,h:1.2,sill:0.9}
   }[type];
   var r={};Object.keys(base).forEach(function(k){r[k]=base[k]});
@@ -1177,7 +1185,7 @@ function mk(type,o){
   }
   if(type==='room'){r.w=clamp(num(r.w,5),1,80);r.d=clamp(num(r.d,4),1,80);r.h=clamp(num(r.h,2.8),1.5,8);r.walls=!!r.walls;r.sh=String(r.sh||'').replace(/[^nesw]/g,'')}
   if(type==='wall'){r.so=num(r.so,0);r.rid=String(r.rid||'');r.side=['n','e','s','w'].indexOf(r.side)>=0?r.side:'';r.len=clamp(num(r.len,3),0.2,80);r.th=clamp(num(r.th,0.15),0.05,1);r.h=clamp(num(r.h,2.8),0.5,6)}
-  if(type==='door'){r.w=clamp(num(r.w,0.9),0.5,3);r.h=clamp(num(r.h,2.05),1.5,3);r.open=clamp(num(r.open,0),0,110);r.hinge=r.hinge==='r'?'r':'l';r.side=num(r.side,1)<0?-1:1}
+  if(type==='door'){r.kind=r.kind==='slide'?'slide':'hinged';r.w=clamp(num(r.w,0.9),0.5,3);r.h=clamp(num(r.h,2.05),1.5,3);r.open=clamp(num(r.open,0),0,r.kind==='slide'?100:110);r.hinge=r.hinge==='r'?'r':'l';r.side=num(r.side,1)<0?-1:1}
   if(type==='win'){r.w=clamp(num(r.w,1.2),0.3,6);r.h=clamp(num(r.h,1.2),0.2,3);r.sill=clamp(num(r.sill,0.9),0,2.5)}
   if(type==='object'){
     /* un oggetto è una o più forme unite; w/d/shape dei vecchi progetti diventano la prima forma */
@@ -2363,12 +2371,22 @@ function doorLeafSeg(o,segs){
   if(l<1e-6)return;
   segs.push({x1:A[0],y1:A[1],x2:B[0],y2:B[1],nx:dy/l,ny:-dx/l,wid:o.id});
 }
+/* porta scorrevole: il pannello, largo come il vano, scorre lungo il muro verso il lato scelto (hinge: l = sinistra, r = destra).
+   open è la percentuale di corsa (0 = chiusa, 100 = tutta nel muro accanto). Restituisce l'intervallo u del pannello e il tratto di vano rimasto libero. */
+function slideGeo(o){
+  var f=clamp((o.open||0)/100,0,1),hw=o.w/2,dir=o.hinge==='r'?1:-1,a=-hw+dir*f*o.w;
+  return {f:f,dir:dir,a:a,b:a+o.w,free:dir<0?[hw-f*o.w,hw]:[-hw,-hw+f*o.w]};
+}
 function lightSegs(els){
   var segs=[],doneD={};
   els.forEach(function(w){
     if(w.type!=='wall')return;
     var hl=w.len/2,hs=w.th/2,gaps=[],u=-hl,arr=[];
     openingsFor(w,els).forEach(function(q){
+      if(q.o.type==='door'&&q.o.kind==='slide'){   /* scorrevole: la luce passa solo dove il pannello ha liberato il vano */
+        if(q.o.open>0){var sg=slideGeo(q.o),cc=(q.u0+q.u1)/2;gaps.push([cc+sg.free[0],cc+sg.free[1]])}
+        return;
+      }
       if(q.o.type==='win'||(q.o.type==='door'&&q.o.open>0))gaps.push([q.u0,q.u1]);
       if(q.o.type==='door'&&q.o.open>0&&!doneD[q.o.id]){doneD[q.o.id]=1;doorLeafSeg(q.o,segs)}
     });
@@ -2941,6 +2959,15 @@ function openingItems(p,els,cam,o,PR){
     add(qpiece(PR,[wpt(o,-hw,0,z0),wpt(o,hw,0,z0),wpt(o,hw,0,z1),wpt(o,-hw,0,z1)],'rgb(150,205,240)',mid,{op:0.28,stroke:'rgba(225,240,255,.85)',sw:1.6}));
     var mm=seg3(PR,wpt(o,0,0,z0),wpt(o,0,0,z1))+seg3(PR,wpt(o,-hw,0,(z0+z1)/2),wpt(o,hw,0,(z0+z1)/2));
     if(mm)out.push({depth:PR.dep(mid[0],mid[1],mid[2]),svg:'<path d="'+mm+'" stroke="rgba(225,240,255,.8)" stroke-width="1.4" fill="none"/>'});
+  }else if(o.kind==='slide'){
+    /* pannello scorrevole: una lastra parallela al muro, appoggiata su un lato, con la maniglia sul bordo e la guida in alto */
+    var sg=slideGeo(o),pv=(o.side<0?-1:1)*(ht+0.025),k2=L.k*1.2,zt=z1;
+    var pan=rgbCss([170*L.c[0]/255*k2,128*L.c[1]/255*k2,82*L.c[2]/255*k2]);
+    add(qpiece(PR,[wpt(o,sg.a,pv,0),wpt(o,sg.b,pv,0),wpt(o,sg.b,pv,zt),wpt(o,sg.a,pv,zt)],pan,mid,{stroke:'rgba(0,0,0,.4)',sw:1.2},-0.05));
+    var hu=sg.dir<0?sg.b-0.09:sg.a+0.09,hd=seg3(PR,wpt(o,hu,pv,0.85),wpt(o,hu,pv,1.25));
+    if(hd)out.push({depth:PR.dep(mid[0],mid[1],mid[2])-0.06,svg:'<path d="'+hd+'" stroke="#d9c27a" stroke-width="3.2" stroke-linecap="round" fill="none"/>'});
+    var rl=seg3(PR,wpt(o,-hw-(sg.dir<0?o.w:0),pv,zt+0.03),wpt(o,hw+(sg.dir>0?o.w:0),pv,zt+0.03));
+    if(rl)out.push({depth:PR.dep(mid[0],mid[1],mid[2])-0.06,svg:'<path d="'+rl+'" stroke="rgba(70,76,84,.9)" stroke-width="2.6" fill="none"/>'});
   }else{
     var hg=o.hinge==='r'?1:-1,hx=hg*hw,dxs=-hg,ag=(o.open||0)*Math.PI/180;
     var ex=hx+dxs*o.w*Math.cos(ag),ev=o.side*o.w*Math.sin(ag),zd=z1,k=L.k*1.2;
@@ -3411,6 +3438,12 @@ function stageEl(e){
     g+='<g transform="rotate('+e.rot+')"><rect x="'+(-hw2)+'" y="'+(-gh/2)+'" width="'+ow+'" height="'+gh+'" fill="var(--stage)"/>';
     if(e.type==='win'){
       g+='<rect x="'+(-hw2)+'" y="-7" width="'+ow+'" height="14" fill="var(--cold)" fill-opacity=".35" stroke="var(--cold)" stroke-width="3"/><path d="M'+(-hw2)+' 0H'+hw2+'" stroke="var(--cold)" stroke-width="2"/>';
+    }else if(e.kind==='slide'){
+      /* scorrevole: il pannello corre lungo il muro; il tratteggio mostra dove va a finire quando è tutto aperto */
+      var sg=slideGeo(e),sds=e.side<0?-1:1,py=sds*(((wl2?wl2.th:0.15)*M)/2+6),px0=sg.a*M,pk=(-hw2+sg.dir*ow);
+      g+='<rect x="'+pk+'" y="'+(py-5)+'" width="'+ow+'" height="10" rx="3" fill="none" stroke="var(--ink)" stroke-opacity=".45" stroke-width="2" stroke-dasharray="6 6"/>';
+      g+='<rect x="'+px0+'" y="'+(py-4)+'" width="'+ow+'" height="8" rx="3" fill="var(--surface)" stroke="var(--ink)" stroke-width="3"/>';
+      g+='<path d="M'+(px0+ow/2-sg.dir*10)+' '+py+'H'+(px0+ow/2+sg.dir*10)+'M'+(px0+ow/2+sg.dir*4)+' '+(py-5)+'L'+(px0+ow/2+sg.dir*10)+' '+py+'L'+(px0+ow/2+sg.dir*4)+' '+(py+5)+'" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"/>';
     }else{
       var hr=e.hinge==='r',hx=hr?hw2:-hw2,dxs=hr?-1:1,an=(e.open||0)*Math.PI/180,sd=e.side<0?-1:1;
       var lx=hx+dxs*ow*Math.cos(an),ly=sd*ow*Math.sin(an),sw=((!hr)===(sd>0))?1:0;
@@ -3544,9 +3577,27 @@ function zoomBy(f){
   var V=viewRect(),cx=V.x0+V.w/2,cy=V.y0+V.h/2,nw=clamp(V.w*f,3,800),k=nw/V.w;
   stageView={x0:cx-V.w*k/2,y0:cy-V.h*k/2,w:nw,h:V.h*k};renderStage();
 }
+/* trackpad: due dita che scorrono spostano la vista, il pizzico (Ctrl+rotella) fa zoom; la rotella di un mouse fa zoom come prima */
+var wheelPad=false,wheelPadAt=0,panDX=0,panDY=0,panRaf=0;
+function wheelIsPad(ev){
+  if(ev.deltaMode!==0)return false;
+  var dy=ev.deltaY,pad=ev.deltaX!==0||dy%1!==0||Math.abs(dy)<50;   /* il mouse manda scatti grandi e interi, solo in verticale */
+  if(!pad&&wheelPad&&ev.timeStamp-wheelPadAt<150)pad=true;       /* dentro uno stesso gesto resta trackpad */
+  if(pad){wheelPad=true;wheelPadAt=ev.timeStamp}else if(ev.timeStamp-wheelPadAt>=150)wheelPad=false;
+  return pad;
+}
 stage.addEventListener('wheel',function(ev){
   ev.preventDefault();
-  var V=viewRect(),pt=toStage(ev),dy=ev.deltaMode===1?ev.deltaY*16:ev.deltaY,k=clamp(Math.exp(dy*0.0015),0.5,2);
+  if(!ev.ctrlKey&&!ev.metaKey&&wheelIsPad(ev)){
+    panDX+=ev.deltaX;panDY+=ev.deltaY;
+    if(!panRaf)panRaf=requestAnimationFrame(function(){
+      panRaf=0;var V0=viewRect(),cm=stage.getScreenCTM(),ppm=cm?cm.a*M:0,dx=panDX,dy0=panDY;panDX=panDY=0;
+      if(!ppm)return;
+      stageView={x0:V0.x0+dx/ppm,y0:V0.y0+dy0/ppm,w:V0.w,h:V0.h};renderStage();
+    });
+    return;
+  }
+  var V=viewRect(),pt=toStage(ev),dy=ev.deltaMode===1?ev.deltaY*16:ev.deltaY,k=clamp(Math.exp(dy*((ev.ctrlKey&&Math.abs(dy)<50)?0.012:0.0015)),0.5,2);
   var nw=clamp(V.w*k,3,800),k2=nw/V.w;
   stageView={x0:pt.x-(pt.x-V.x0)*k2,y0:pt.y-(pt.y-V.y0)*k2,w:nw,h:V.h*k2};
   applyView();
@@ -4525,11 +4576,13 @@ document.addEventListener('click',function(ev){
   var R=baseRect(p),o={x:R.x0+R.w*0.42+(n%6)*0.7,y:R.y0+R.d*0.4+(n%5)*0.6};
   if(type==='wall'){o.name='Muro '+(n+1);o.x=R.x0+R.w/2;o.y=R.y0+1+(n%6)*1.1}
   if(type==='door'||type==='win'){
-    o.name=(type==='door'?'Porta ':'Finestra ')+(n+1);
+    var sl=t==='door-slide';
+    o.name=(type==='door'?(sl?'Porta scorrevole ':'Porta '):'Finestra ')+(n+1);
+    if(sl){o.kind='slide';o.w=1.2}
     var w0=p.els.filter(function(e){return e.type==='wall'})[0];
     if(w0){
       /* si mette sul primo muro, di fianco a quelle già presenti */
-      var cnt=openingsFor(w0,p.els).length,ww=type==='door'?0.9:1.2,lim=Math.max(0,w0.len/2-ww/2),u=clamp(-w0.len/2+ww/2+0.3+cnt*(ww+0.3),-lim,lim),q=wpt(w0,u,0,0);
+      var cnt=openingsFor(w0,p.els).length,ww=type==='door'?(sl?1.2:0.9):1.2,lim=Math.max(0,w0.len/2-ww/2),u=clamp(-w0.len/2+ww/2+0.3+cnt*(ww+0.3),-lim,lim),q=wpt(w0,u,0,0);
       o.x=q[0];o.y=q[1];o.rot=w0.rot;
     }
   }
@@ -4761,10 +4814,18 @@ function renderInspector(){
   if(e.type==='door'){
     h+=frow('Larghezza (m)',nin('w',r1(e.w),0.5,3,0.05));
     h+=frow('Altezza (m)',nin('h',r1(e.h),1.5,3,0.05));
-    h+=frow('Apertura anta',rng('open',Math.round(e.open||0),0,110,5,'°'));
-    h+=frow('Cerniera',seg('hinge',e.hinge,[['l','Sinistra'],['r','Destra']]));
-    h+=frow('Apre verso',seg('side',String(e.side),[['1','Lato A'],['-1','Lato B']]));
-    h+='<p class="meta">Nella pianta la linea tratteggiata mostra dove gira l\'anta. Se apre dalla parte sbagliata cambia lato o cerniera. Trascinala sopra un muro per bucarlo.</p>';
+    h+=frow('Tipo',seg('dkind',e.kind==='slide'?'slide':'hinged',[['hinged','Battente'],['slide','Scorrevole']]));
+    if(e.kind==='slide'){
+      h+=frow('Apertura del pannello',rng('open',Math.round(e.open||0),0,100,5,'%'));
+      h+=frow('Scorre verso',seg('hinge',e.hinge,[['l','Sinistra'],['r','Destra']]));
+      h+=frow('Pannello sul',seg('side',String(e.side),[['1','Lato A'],['-1','Lato B']]));
+      h+='<p class="meta">Nella pianta il tratteggio mostra dove arriva il pannello quando è tutto aperto. Se scorre dalla parte sbagliata cambia lato. Trascinala sopra un muro per bucarlo.</p>';
+    }else{
+      h+=frow('Apertura anta',rng('open',Math.round(e.open||0),0,110,5,'°'));
+      h+=frow('Cerniera',seg('hinge',e.hinge,[['l','Sinistra'],['r','Destra']]));
+      h+=frow('Apre verso',seg('side',String(e.side),[['1','Lato A'],['-1','Lato B']]));
+      h+='<p class="meta">Nella pianta la linea tratteggiata mostra dove gira l\'anta. Se apre dalla parte sbagliata cambia lato o cerniera. Trascinala sopra un muro per bucarlo.</p>';
+    }
   }
   if(e.type==='win'){
     h+=frow('Larghezza (m)',nin('w',r1(e.w),0.3,6,0.05));
@@ -4860,7 +4921,7 @@ insp.addEventListener('input',function(ev){
   if(e.type==='wall'||isOpening(e)||e.type==='room'){var c2=mk(e.type,e);['len','th','h','w','d','sill','open'].forEach(function(q){if(q in e&&c2[q]!=null)e[q]=c2[q]})}
   if(e.type==='room'){roomLayout(e,cur().els);growRoom(e)}
   if(e.type==='wall'&&e.rid){var rp=cur().els.filter(function(x){return x.id===e.rid})[0];if(rp)roomLayout(rp,cur().els)}
-  var o=t.parentNode.querySelector('output');if(o)o.textContent=t.value+((k==='intensity'||k==='shake'||k==='fxDuty')?'%':(k==='fxHz'?' Hz':'°'));
+  var o=t.parentNode.querySelector('output');if(o)o.textContent=t.value+((k==='intensity'||k==='shake'||k==='fxDuty'||(k==='open'&&t.max==='100'))?'%':(k==='fxHz'?' Hz':'°'));
   if(k==='name'||k==='lens'){renderChips();renderPreviewHead()}
   if(k==='wait0')subjSumLive(e);
   refreshLive();saveSoon();
@@ -4959,6 +5020,7 @@ insp.addEventListener('click',function(ev){
   }
   if(a==='wdetach'&&e.type==='wall'){e.rid='';e.side=''}
   if(a==='hinge')e.hinge=v;
+  if(a==='dkind'&&e.type==='door'){e.kind=v==='slide'?'slide':'hinged';if(e.kind==='slide')e.open=Math.min(e.open||0,100)}
   if(a==='side')e.side=+v<0?-1:1;
   if(a==='tone')e.kelvin=v==='warm'?3200:5600;
   if(a==='kind'){e.kind=v;e.spread=LKIND_SPREAD[v]||e.spread}
@@ -5309,7 +5371,7 @@ function renderEd(){
       else if(k==='desc'||k==='ann')h+='<td><textarea data-f="'+k+'" rows="2">'+esc(v)+'</textarea></td>';
       else h+='<td><input type="text" data-f="'+k+'" value="'+esc(v)+'"></td>';
     });
-    h+='<td><input type="text" data-f="file" value="'+esc(r.file||'')+'" placeholder="es. A001_C003" aria-label="Nome file della ripresa"></td></tr>';
+    h+='<td class="fl"><input type="text" data-f="file" value="'+esc(r.file||'')+'" placeholder="es. A001_C003" aria-label="Nome file della ripresa" autocomplete="off" spellcheck="false"></td></tr>';
   });
   wrap.innerHTML=h+'</tbody></table>';
   wrap.scrollLeft=sx;wrap.scrollTop=sy;
@@ -5550,6 +5612,22 @@ async function edGirRender(){
   $('#edGirPick').textContent='Cambia cartella';$('#edGirUnlink').hidden=false;
   var p='';try{p=await girDir.queryPermission({mode:'read'})}catch(e){}
   girInfo('Cartella collegata: «'+girDir.name+'»'+(p==='granted'?'':' · riautorizza l’accesso con «Controlla file»'));
+  if(p==='granted')girAuto();
+}
+/* legge l'elenco dei file in silenzio (solo se l'accesso è già concesso): serve ai suggerimenti della colonna «File» */
+var girAutoBusy=false;
+async function girAuto(){
+  if(!girDir||girIdx||girAutoBusy||girBusy)return;
+  var d=girDir;girAutoBusy=true;
+  try{
+    if(await d.queryPermission({mode:'read'})!=='granted')return;
+    girStop=false;
+    var ix=await girScan(d,function(n){if(d===girDir)girInfo('Leggo la cartella… '+n+' file')});
+    if(d!==girDir)return;
+    if(!girIdx)girIdx=ix;
+    girInfo('Cartella collegata: «'+d.name+'» · '+ix.n+' file letti · la colonna «File» ora suggerisce i nomi');
+  }catch(e){}
+  finally{girAutoBusy=false}
 }
 async function girEnsureIndex(){
   if(!girDir){toast('Collega prima la cartella del girato');return null}
@@ -5586,6 +5664,7 @@ $('#edGirPick').addEventListener('click',async function(){
   var h;try{h=await window.showDirectoryPicker({id:'ciak-girato-src',mode:'read'})}catch(e){return}
   girDir=h;girIdx=null;await girSave(curId,h);$('#edGirOut').innerHTML='';
   $('#edGirPick').textContent='Cambia cartella';$('#edGirUnlink').hidden=false;girInfo('Cartella collegata: «'+h.name+'»');
+  girAuto();
 });
 $('#edGirUnlink').addEventListener('click',async function(){if(girBusy)return;girDir=null;girIdx=null;await girSave(curId,null);edGirRender()});
 $('#edGirCheck').addEventListener('click',async function(){
@@ -5634,6 +5713,99 @@ $('#edGirExtract').addEventListener('click',async function(){
   }catch(e){toast('Errore: '+(e&&e.message||'operazione non riuscita'))}
   finally{girBusy=false;girStop=false;$('#edGirStop').hidden=true;prog.hidden=true}
 });
+
+
+/* ---------- suggerimenti nella colonna «File»: come i nomi nella sceneggiatura, il completamento compare in grigio; Invio (o freccia destra) lo accetta ----------
+   • dopo una ripresa già scritta propone la successiva: A001_C001 → A001_C002 (stessa quantità di zeri, anche con più nomi o con l'estensione)
+   • con la cartella del girato collegata completa anche con i nomi dei file che ci sono davvero e non sono ancora sul bollettino */
+function edNextName(n){
+  var ext='',m;
+  n=String(n||'').trim();
+  m=/\.[A-Za-z][A-Za-z0-9]{0,4}$/.exec(n);if(m){ext=m[0];n=n.slice(0,-ext.length)}
+  m=/^(.*?)(\d+)(\D*)$/.exec(n);if(!m)return '';
+  var d=String(parseInt(m[2],10)+1);while(d.length<m[2].length)d='0'+d;
+  return m[1]+d+m[3]+ext;
+}
+var edCol=null;
+function edFolderNames(){
+  if(!girIdx)return null;
+  if(girIdx.edL)return girIdx.edL;
+  if(!edCol)edCol=new Intl.Collator(undefined,{numeric:true,sensitivity:'base'});
+  var seen={},out=[];
+  Object.keys(girIdx.byBase).forEach(function(k){
+    var o=girIdx.byBase[k][0],b=girBase(o.name);
+    if(/\d/.test(b)&&!seen[k]){seen[k]=1;out.push(b)}   /* i nomi delle riprese hanno sempre un numero: si scartano file come «Leggimi» */
+  });
+  out.sort(edCol.compare);return (girIdx.edL=out);
+}
+/* restituisce il testo da aggiungere a quello già scritto nel campo «File» della riga i */
+function edSug(i,val){
+  var E=S.ed,R=E.rows,j,prev='',val=String(val==null?'':val),cut=Math.max(val.lastIndexOf(','),val.lastIndexOf(';')),
+      pre=val.slice(0,cut+1),seg=val.slice(cut+1).replace(/^\s+/,''),k=girNames(pre).length,low=seg.toLowerCase(),pp,incr='',all=edFolderNames(),used={},c,best='';
+  for(j=i-1;j>=0;j--){if(String(R[j].file||'').trim()){prev=R[j].file;break}}
+  pp=girNames(prev);
+  R.forEach(function(r,q){if(q!==i)girNames(r.file).forEach(function(x){used[girBase(x).toLowerCase()]=1})});
+  if(pp[k])incr=edNextName(pp[k]);
+  var folderHas=function(n){return all&&all.some(function(x){return x.toLowerCase()===girBase(n).toLowerCase()})};
+  /* campo vuoto: la ripresa dopo quella scritta sopra (tutti i nomi della riga, per esempio video e audio) */
+  if(!val.trim()){
+    if(incr){
+      var list=pp.map(edNextName).filter(Boolean);
+      if(!all||folderHas(incr))return list.join(', ');
+    }
+    if(all){   /* il nome «+1» non c'è nella cartella: si propone il primo file seguente che non è ancora sul bollettino */
+      var pb=pp[0]?girBase(pp[0]):'';
+      for(j=0;j<all.length;j++){if(!used[all[j].toLowerCase()]&&(!pb||edCol.compare(all[j],pb)>0))return all[j]}
+    }
+    return '';
+  }
+  if(!seg)return incr&&(!all||folderHas(incr))?incr:'';
+  if(incr&&(!all||folderHas(incr))&&incr.length>seg.length&&incr.toLowerCase().indexOf(low)===0)return incr.slice(seg.length);
+  if(all){
+    var pb2=pp[k]?girBase(pp[k]):'';
+    for(j=0;j<all.length;j++){
+      c=all[j];if(c.length<=seg.length||c.toLowerCase().indexOf(low)!==0||used[c.toLowerCase()])continue;
+      if(!best)best=c;if(!pb2||edCol.compare(c,pb2)>0){best=c;break}
+    }
+    if(best)return best.slice(seg.length);
+  }
+  return '';
+}
+var edg=document.createElement('div'),edgTxt='',edgIn=null,edgOff=false;
+edg.className='edgh';edg.setAttribute('aria-hidden','true');
+function edgClear(){
+  if(edgIn&&edgIn.parentNode)edgIn.parentNode.classList.remove('gh-on');
+  edgTxt='';edgIn=null;if(edg.parentNode)edg.parentNode.removeChild(edg);
+}
+function edgShow(t){
+  edgClear();
+  if(edgOff||MOB||!S||!S.ed||!t||!t.dataset||t.dataset.f!=='file'||document.activeElement!==t)return;
+  if(t.selectionStart!==t.value.length||t.selectionEnd!==t.value.length)return;
+  var tr=t.closest('tr[data-i]');if(!tr)return;
+  var c=edSug(+tr.dataset.i,t.value);if(!c)return;
+  var cs=getComputedStyle(t);
+  edg.style.cssText='left:'+t.offsetLeft+'px;top:'+t.offsetTop+'px;width:'+t.offsetWidth+'px;height:'+t.offsetHeight+'px;font-family:'+cs.fontFamily+';font-size:'+cs.fontSize+';font-weight:'+cs.fontWeight+';letter-spacing:'+cs.letterSpacing+';padding:'+cs.padding+';line-height:'+(cs.lineHeight==='normal'?(t.offsetHeight-2*parseFloat(cs.paddingTop||0)-2)+'px':cs.lineHeight);
+  edg.innerHTML='<i>'+esc(t.value)+'</i><b>'+esc(c)+'</b>';
+  edgTxt=c;edgIn=t;t.parentNode.appendChild(edg);t.parentNode.classList.add('gh-on');
+}
+function edgAccept(t){
+  var add=edgTxt;edgClear();edgOff=true;if(!add)return;
+  t.value+=add;t.setSelectionRange(t.value.length,t.value.length);
+  edSet(t,true);
+}
+/* in fase di cattura: Invio e freccia destra accettano il suggerimento invece di fare il loro solito */
+$('#edWrap').addEventListener('keydown',function(e){
+  var t=e.target;if(!t||!t.dataset||t.dataset.f!=='file'||e.isComposing)return;
+  if(e.key==='Escape'){if(edgTxt){e.preventDefault();edgClear();edgOff=true}return}
+  if(!edgTxt||edgIn!==t||e.shiftKey||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(e.key==='Enter'||(e.key==='ArrowRight'&&t.selectionStart===t.value.length&&t.selectionEnd===t.value.length)){
+    e.preventDefault();e.stopImmediatePropagation();edgAccept(t);
+  }
+},true);
+$('#edWrap').addEventListener('input',function(e){edgOff=false;edgShow(e.target)});
+$('#edWrap').addEventListener('focusin',function(e){edgOff=false;edgShow(e.target)});
+$('#edWrap').addEventListener('focusout',edgClear);
+document.addEventListener('selectionchange',function(){var a=document.activeElement;if(a&&a.dataset&&a.dataset.f==='file'&&a.closest&&a.closest('#edWrap'))edgShow(a)});
 
 
 /* ---------- dati e progetto ---------- */
@@ -8621,6 +8793,7 @@ t:{
 "Principale":"Key","Riempimento":"Fill","Controluce":"Backlight","Pratica in scena":"Practical","Naturale (finestra, sole)":"Natural (window, sun)",
 "Intensità":"Intensity","Apertura":"Spread",
 "Spessore (m)":"Thickness (m)","Stacca dalla stanza":"Detach from the room","Apertura anta":"Door swing","Cerniera":"Hinge","Sinistra":"Left","Destra":"Right",
+"Porta scorrevole":"Sliding door","Battente":"Hinged","Scorrevole":"Sliding","Apertura del pannello":"Panel opening","Scorre verso":"Slides toward","Pannello sul":"Panel on","Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.":"On a trackpad: scroll with two fingers to move the view, pinch to zoom. With a mouse the wheel zooms.",
 "Apre verso":"Opens toward","Lato A":"Side A","Lato B":"Side B","Da terra (m)":"Sill height (m)",
 "Profondità (m)":"Depth (m)","Altezza soffitto (m)":"Ceiling height (m)","Centro X (m)":"Center X (m)","Centro Y (m)":"Center Y (m)",
 "Ricrea tutti i muri":"Rebuild all walls","Seleziona contenuto":"Select contents","Elimina stanza e muri":"Delete room and walls",
@@ -8863,6 +9036,7 @@ t:{
 "Principale":"Principal","Riempimento":"Relleno","Controluce":"Contraluz","Pratica in scena":"Práctica en escena","Naturale (finestra, sole)":"Natural (ventana, sol)",
 "Intensità":"Intensidad","Apertura":"Apertura",
 "Spessore (m)":"Grosor (m)","Stacca dalla stanza":"Separar de la habitación","Apertura anta":"Apertura de la hoja","Cerniera":"Bisagra","Sinistra":"Izquierda","Destra":"Derecha",
+"Porta scorrevole":"Puerta corredera","Battente":"Abatible","Scorrevole":"Corredera","Apertura del pannello":"Apertura del panel","Scorre verso":"Se desliza hacia","Pannello sul":"Panel en","Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.":"Con el trackpad: desplaza con dos dedos para mover la vista, pellizca para hacer zoom. Con el ratón, la rueda hace zoom.",
 "Apre verso":"Abre hacia","Lato A":"Lado A","Lato B":"Lado B","Da terra (m)":"Desde el suelo (m)",
 "Profondità (m)":"Profundidad (m)","Altezza soffitto (m)":"Altura del techo (m)","Centro X (m)":"Centro X (m)","Centro Y (m)":"Centro Y (m)",
 "Ricrea tutti i muri":"Rehacer todos los muros","Seleziona contenuto":"Seleccionar contenido","Elimina stanza e muri":"Eliminar habitación y muros",
@@ -9105,6 +9279,7 @@ t:{
 "Principale":"Principale","Riempimento":"D'appoint","Controluce":"Contre-jour","Pratica in scena":"Source pratique","Naturale (finestra, sole)":"Naturelle (fenêtre, soleil)",
 "Intensità":"Intensité","Apertura":"Ouverture",
 "Spessore (m)":"Épaisseur (m)","Stacca dalla stanza":"Détacher de la pièce","Apertura anta":"Ouverture du battant","Cerniera":"Charnière","Sinistra":"Gauche","Destra":"Droite",
+"Porta scorrevole":"Porte coulissante","Battente":"Battante","Scorrevole":"Coulissante","Apertura del pannello":"Ouverture du panneau","Scorre verso":"Coulisse vers","Pannello sul":"Panneau sur","Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.":"Sur trackpad : faites défiler à deux doigts pour déplacer la vue, pincez pour zoomer. Avec une souris, la molette zoome.",
 "Apre verso":"S'ouvre vers","Lato A":"Côté A","Lato B":"Côté B","Da terra (m)":"Hauteur d'allège (m)",
 "Profondità (m)":"Profondeur (m)","Altezza soffitto (m)":"Hauteur sous plafond (m)","Centro X (m)":"Centre X (m)","Centro Y (m)":"Centre Y (m)",
 "Ricrea tutti i muri":"Recréer tous les murs","Seleziona contenuto":"Sélectionner le contenu","Elimina stanza e muri":"Supprimer la pièce et les murs",
@@ -9346,6 +9521,7 @@ t:{
 "Principale":"Principal","Riempimento":"Preenchimento","Controluce":"Contraluz","Pratica in scena":"Prática em cena","Naturale (finestra, sole)":"Natural (janela, sol)",
 "Intensità":"Intensidade","Apertura":"Abertura",
 "Spessore (m)":"Espessura (m)","Stacca dalla stanza":"Separar do cômodo","Apertura anta":"Abertura da folha","Cerniera":"Dobradiça","Sinistra":"Esquerda","Destra":"Direita",
+"Porta scorrevole":"Porta de correr","Battente":"De abrir","Scorrevole":"De correr","Apertura del pannello":"Abertura do painel","Scorre verso":"Desliza para","Pannello sul":"Painel no","Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.":"No trackpad: role com dois dedos para mover a vista, faça pinça para dar zoom. Com o mouse, a roda dá zoom.",
 "Apre verso":"Abre para","Lato A":"Lado A","Lato B":"Lado B","Da terra (m)":"Do chão (m)",
 "Profondità (m)":"Profundidade (m)","Altezza soffitto (m)":"Altura do teto (m)","Centro X (m)":"Centro X (m)","Centro Y (m)":"Centro Y (m)",
 "Ricrea tutti i muri":"Refazer todas as paredes","Seleziona contenuto":"Selecionar conteúdo","Elimina stanza e muri":"Excluir cômodo e paredes",
@@ -9587,6 +9763,7 @@ t:{
 "Principale":"Haupt","Riempimento":"Aufheller","Controluce":"Gegenlicht","Pratica in scena":"Practical im Bild","Naturale (finestra, sole)":"Natürlich (Fenster, Sonne)",
 "Intensità":"Intensität","Apertura":"Öffnung",
 "Spessore (m)":"Stärke (m)","Stacca dalla stanza":"Vom Raum lösen","Apertura anta":"Türflügel-Öffnung","Cerniera":"Scharnier","Sinistra":"Links","Destra":"Rechts",
+"Porta scorrevole":"Schiebetür","Battente":"Drehflügel","Scorrevole":"Schiebetür","Apertura del pannello":"Öffnung des Paneels","Scorre verso":"Schiebt nach","Pannello sul":"Paneel auf","Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.":"Am Trackpad: mit zwei Fingern scrollen verschiebt die Ansicht, Zusammenziehen zoomt. Mit der Maus zoomt das Rad.",
 "Apre verso":"Öffnet nach","Lato A":"Seite A","Lato B":"Seite B","Da terra (m)":"Brüstungshöhe (m)",
 "Profondità (m)":"Tiefe (m)","Altezza soffitto (m)":"Deckenhöhe (m)","Centro X (m)":"Mitte X (m)","Centro Y (m)":"Mitte Y (m)",
 "Ricrea tutti i muri":"Alle Wände neu erstellen","Seleziona contenuto":"Inhalt auswählen","Elimina stanza e muri":"Raum und Wände löschen",
@@ -9828,6 +10005,7 @@ t:{
 "Principale":"Główne","Riempimento":"Wypełniające","Controluce":"Światło kontrowe","Pratica in scena":"Światło praktyczne","Naturale (finestra, sole)":"Naturalne (okno, słońce)",
 "Intensità":"Intensywność","Apertura":"Rozwarcie",
 "Spessore (m)":"Grubość (m)","Stacca dalla stanza":"Odłącz od pomieszczenia","Apertura anta":"Otwarcie skrzydła","Cerniera":"Zawias","Sinistra":"Lewa","Destra":"Prawa",
+"Porta scorrevole":"Drzwi przesuwne","Battente":"Skrzydłowe","Scorrevole":"Przesuwne","Apertura del pannello":"Otwarcie panelu","Scorre verso":"Przesuwa się w","Pannello sul":"Panel po stronie","Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.":"Na gładziku: przewijaj dwoma palcami, aby przesunąć widok, uszczypnij, aby powiększyć. Myszą powiększa kółko.",
 "Apre verso":"Otwiera się do","Lato A":"Strona A","Lato B":"Strona B","Da terra (m)":"Od podłogi (m)",
 "Profondità (m)":"Głębokość (m)","Altezza soffitto (m)":"Wysokość sufitu (m)","Centro X (m)":"Środek X (m)","Centro Y (m)":"Środek Y (m)",
 "Ricrea tutti i muri":"Odtwórz wszystkie ściany","Seleziona contenuto":"Zaznacz zawartość","Elimina stanza e muri":"Usuń pomieszczenie i ściany",
@@ -10074,6 +10252,7 @@ t:{
 "Principale":"Основной","Riempimento":"Заполняющий","Controluce":"Контровой","Pratica in scena":"Источник в кадре","Naturale (finestra, sole)":"Естественный (окно, солнце)",
 "Intensità":"Интенсивность","Apertura":"Угол луча",
 "Spessore (m)":"Толщина (м)","Stacca dalla stanza":"Отделить от комнаты","Apertura anta":"Открывание створки","Cerniera":"Петли","Sinistra":"Слева","Destra":"Справа",
+"Porta scorrevole":"Раздвижная дверь","Battente":"Распашная","Scorrevole":"Раздвижная","Apertura del pannello":"Открытие панели","Scorre verso":"Сдвигается в сторону","Pannello sul":"Панель на стороне","Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.":"На трекпаде: прокрутка двумя пальцами двигает вид, щипок — масштаб. Мышью масштаб меняет колесо.",
 "Apre verso":"Открывается в сторону","Lato A":"Сторона A","Lato B":"Сторона B","Da terra (m)":"От пола (м)",
 "Profondità (m)":"Глубина (м)","Altezza soffitto (m)":"Высота потолка (м)","Centro X (m)":"Центр X (м)","Centro Y (m)":"Центр Y (м)",
 "Ricrea tutti i muri":"Пересоздать все стены","Seleziona contenuto":"Выбрать содержимое","Elimina stanza e muri":"Удалить комнату и стены",
@@ -10315,6 +10494,7 @@ t:{
 "Principale":"Huvudljus","Riempimento":"Fyllnadsljus","Controluce":"Motljus","Pratica in scena":"Praktisk ljuskälla","Naturale (finestra, sole)":"Naturligt (fönster, sol)",
 "Intensità":"Intensitet","Apertura":"Spridning",
 "Spessore (m)":"Tjocklek (m)","Stacca dalla stanza":"Lösgör från rummet","Apertura anta":"Dörrens öppning","Cerniera":"Gångjärn","Sinistra":"Vänster","Destra":"Höger",
+"Porta scorrevole":"Skjutdörr","Battente":"Slagdörr","Scorrevole":"Skjutdörr","Apertura del pannello":"Panelens öppning","Scorre verso":"Glider åt","Pannello sul":"Panel på","Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.":"På styrplattan: bläddra med två fingrar för att flytta vyn, nyp för att zooma. Med mus zoomar hjulet.",
 "Apre verso":"Öppnas mot","Lato A":"Sida A","Lato B":"Sida B","Da terra (m)":"Höjd från golv (m)",
 "Profondità (m)":"Djup (m)","Altezza soffitto (m)":"Takhöjd (m)","Centro X (m)":"Centrum X (m)","Centro Y (m)":"Centrum Y (m)",
 "Ricrea tutti i muri":"Återskapa alla väggar","Seleziona contenuto":"Markera innehållet","Elimina stanza e muri":"Ta bort rum och väggar",
@@ -10558,6 +10738,7 @@ t:{
 "Principale":"Κύριο φως","Riempimento":"Φως γεμίσματος","Controluce":"Οπίσθιο φως","Pratica in scena":"Πρακτικό φως","Naturale (finestra, sole)":"Φυσικό (παράθυρο, ήλιος)",
 "Intensità":"Ένταση","Apertura":"Άνοιγμα",
 "Spessore (m)":"Πάχος (m)","Stacca dalla stanza":"Αποσύνδεση από το δωμάτιο","Apertura anta":"Άνοιγμα φύλλου","Cerniera":"Μεντεσές","Sinistra":"Αριστερά","Destra":"Δεξιά",
+"Porta scorrevole":"Συρόμενη πόρτα","Battente":"Ανοιγόμενη","Scorrevole":"Συρόμενη","Apertura del pannello":"Άνοιγμα πάνελ","Scorre verso":"Ολισθαίνει προς","Pannello sul":"Πάνελ στην πλευρά","Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.":"Στο trackpad: κύλιση με δύο δάχτυλα για μετακίνηση της προβολής, τσίμπημα για ζουμ. Με το ποντίκι ο τροχός κάνει ζουμ.",
 "Apre verso":"Ανοίγει προς","Lato A":"Πλευρά Α","Lato B":"Πλευρά Β","Da terra (m)":"Από το δάπεδο (m)",
 "Profondità (m)":"Βάθος (m)","Altezza soffitto (m)":"Ύψος οροφής (m)","Centro X (m)":"Κέντρο X (m)","Centro Y (m)":"Κέντρο Y (m)",
 "Ricrea tutti i muri":"Αναδημιουργία όλων των τοίχων","Seleziona contenuto":"Επιλογή περιεχομένου","Elimina stanza e muri":"Διαγραφή δωματίου και τοίχων",
@@ -10801,6 +10982,7 @@ t:{
 "Principale":"Lumină principală","Riempimento":"Lumină de umplere","Controluce":"Contralumină","Pratica in scena":"Sursă practică în scenă","Naturale (finestra, sole)":"Naturală (fereastră, soare)",
 "Intensità":"Intensitate","Apertura":"Deschidere",
 "Spessore (m)":"Grosime (m)","Stacca dalla stanza":"Detașează de cameră","Apertura anta":"Deschiderea canatului","Cerniera":"Balama","Sinistra":"Stânga","Destra":"Dreapta",
+"Porta scorrevole":"Ușă glisantă","Battente":"Batantă","Scorrevole":"Glisantă","Apertura del pannello":"Deschiderea panoului","Scorre verso":"Glisează spre","Pannello sul":"Panou pe","Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.":"Pe trackpad: derulează cu două degete pentru a muta vederea, ciupește pentru zoom. Cu mouse-ul, rotița face zoom.",
 "Apre verso":"Se deschide spre","Lato A":"Partea A","Lato B":"Partea B","Da terra (m)":"De la podea (m)",
 "Profondità (m)":"Adâncime (m)","Altezza soffitto (m)":"Înălțimea tavanului (m)","Centro X (m)":"Centru X (m)","Centro Y (m)":"Centru Y (m)",
 "Ricrea tutti i muri":"Recreează toți pereții","Seleziona contenuto":"Selectează conținutul","Elimina stanza e muri":"Șterge camera și pereții",
@@ -11044,6 +11226,7 @@ t:{
 "Principale":"Ana ışık","Riempimento":"Dolgu ışığı","Controluce":"Arka ışık","Pratica in scena":"Sahne içi pratik ışık","Naturale (finestra, sole)":"Doğal (pencere, güneş)",
 "Intensità":"Yoğunluk","Apertura":"Açılım",
 "Spessore (m)":"Kalınlık (m)","Stacca dalla stanza":"Odadan ayır","Apertura anta":"Kanat açılışı","Cerniera":"Menteşe","Sinistra":"Sol","Destra":"Sağ",
+"Porta scorrevole":"Sürgülü kapı","Battente":"Menteşeli","Scorrevole":"Sürgülü","Apertura del pannello":"Panel açıklığı","Scorre verso":"Kayma yönü","Pannello sul":"Panel tarafı","Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.":"Dokunmatik yüzeyde: iki parmakla kaydırarak görünümü taşıyın, sıkıştırarak yakınlaştırın. Farenin tekerleği yakınlaştırır.",
 "Apre verso":"Açılma yönü","Lato A":"A tarafı","Lato B":"B tarafı","Da terra (m)":"Zeminden (m)",
 "Profondità (m)":"Derinlik (m)","Altezza soffitto (m)":"Tavan yüksekliği (m)","Centro X (m)":"Merkez X (m)","Centro Y (m)":"Merkez Y (m)",
 "Ricrea tutti i muri":"Tüm duvarları yeniden oluştur","Seleziona contenuto":"İçeriği seç","Elimina stanza e muri":"Odayı ve duvarları sil",
@@ -11286,6 +11469,7 @@ t:{
 "Principale":"Hoofdlicht","Riempimento":"Opvullicht","Controluce":"Tegenlicht","Pratica in scena":"Praktisch licht in beeld","Naturale (finestra, sole)":"Natuurlijk (raam, zon)",
 "Intensità":"Intensiteit","Apertura":"Spreiding",
 "Spessore (m)":"Dikte (m)","Stacca dalla stanza":"Loskoppelen van de kamer","Apertura anta":"Draairichting deur","Cerniera":"Scharnier","Sinistra":"Links","Destra":"Rechts",
+"Porta scorrevole":"Schuifdeur","Battente":"Draaideur","Scorrevole":"Schuivend","Apertura del pannello":"Opening van het paneel","Scorre verso":"Schuift naar","Pannello sul":"Paneel aan","Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.":"Op de trackpad: scroll met twee vingers om de weergave te verschuiven, knijp om te zoomen. Met een muis zoomt het wiel.",
 "Apre verso":"Opent naar","Lato A":"Zijde A","Lato B":"Zijde B","Da terra (m)":"Vanaf de vloer (m)",
 "Profondità (m)":"Diepte (m)","Altezza soffitto (m)":"Plafondhoogte (m)","Centro X (m)":"Midden X (m)","Centro Y (m)":"Midden Y (m)",
 "Ricrea tutti i muri":"Alle muren opnieuw maken","Seleziona contenuto":"Inhoud selecteren","Elimina stanza e muri":"Kamer en muren verwijderen",
@@ -11533,6 +11717,7 @@ t:{
 "Principale":"Основне","Riempimento":"Заповнювальне","Controluce":"Контрове","Pratica in scena":"Практичне (у кадрі)","Naturale (finestra, sole)":"Природне (вікно, сонце)",
 "Intensità":"Інтенсивність","Apertura":"Розкид",
 "Spessore (m)":"Товщина (м)","Stacca dalla stanza":"Відокремити від кімнати","Apertura anta":"Відкривання стулки","Cerniera":"Петлі","Sinistra":"Ліворуч","Destra":"Праворуч",
+"Porta scorrevole":"Розсувні двері","Battente":"Розпашні","Scorrevole":"Розсувні","Apertura del pannello":"Відкриття панелі","Scorre verso":"Зсувається в бік","Pannello sul":"Панель на боці","Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.":"На трекпаді: прокручування двома пальцями рухає вигляд, щипок — масштаб. Мишею масштаб змінює колесо.",
 "Apre verso":"Відчиняється в бік","Lato A":"Сторона A","Lato B":"Сторона B","Da terra (m)":"Від підлоги (м)",
 "Profondità (m)":"Глибина (м)","Altezza soffitto (m)":"Висота стелі (м)","Centro X (m)":"Центр X (м)","Centro Y (m)":"Центр Y (м)",
 "Ricrea tutti i muri":"Відновити всі стіни","Seleziona contenuto":"Вибрати вміст","Elimina stanza e muri":"Видалити кімнату й стіни",
@@ -12243,7 +12428,7 @@ Storage.prototype.setItem=function(k){_set.apply(this,arguments);if(this===LS&&!
 var PUSH_GAP=200,pushDue={},pushLast={};
 /* il primo cambiamento parte subito; durante una raffica si invia al massimo ogni PUSH_GAP ms con lo stato più recente */
 function sched(k){
-  if(me.role===RFREE)return;   /* «Altro sul set»: solo visualizzazione, niente invii */
+  if(roleFreeFor((links[k]||{}).code))return;   /* «Altro sul set»: solo visualizzazione, niente invii */
   var n=Date.now();if(timers[k]&&pushDue[k]>n-40)return;
   var w=Math.max(0,PUSH_GAP-(n-(pushLast[k]||0)));pushDue[k]=n+w;
   timers[k]=setTimeout(function(){timers[k]=0;pushLast[k]=Date.now();push(k)},w);
@@ -12256,7 +12441,7 @@ function chunkRun(ops,done,fail){
   })();
 }
 function push(k){
-  if(me.role===RFREE)return;
+  if(roleFreeFor((links[k]||{}).code))return;
   var L=links[k],v=LS.getItem(k);if(!L||v==null||!db||!uid)return;
   var code=L.code,prev=L.h||{},p;
   try{p=Core.planPush(L.kind,v,prev)}catch(e){return}
@@ -12500,12 +12685,11 @@ window.__ciakTeamForget=function(key){try{aTomb(key)}catch(e){}try{if(links[key]
 window.__ciakTeamApi={
   isShared:function(k){return !!links[k]},
   /* «Altro sul set»: i progetti condivisi si possono solo guardare */
-  isViewer:function(k){return me.role===RFREE&&!!links[k]},
-  viewing:function(){if(me.role!==RFREE)return null;var i,T,k;for(i=0;i<APPS.length;i++){T=APPS[i].get();if(!T)continue;k=null;try{k=T.key()}catch(e){}if(k&&links[k])return k}return null},
-  roleName:function(){return roleLabel(me.role,me.g,me.alt)},
+  isViewer:function(k){return !!links[k]&&roleFreeFor(links[k].code)},
+  viewing:function(){var i,T,k;for(i=0;i<APPS.length;i++){T=APPS[i].get();if(!T)continue;k=null;try{k=T.key()}catch(e){}if(k&&links[k]&&roleFreeFor(links[k].code))return k}return null},
+  roleName:function(){var k=window.__ciakTeamApi.viewing(),r=k&&links[k]?roleOfCode(links[k].code):{role:me.role,alt:me.alt};return roleLabel(r.role,me.g,r.alt)},
   /* «Condividi» dalla selezione nella home: manda i progetti alla produzione (se ce n'è una sola subito, altrimenti si sceglie nel pannello) */
   shareMany:function(list){
-    if(me.role===RFREE){toast('Con il ruolo «'+roleLabel(me.role,me.g,me.alt)+'» puoi solo visualizzare i progetti condivisi: non puoi condividerne.',5000);return Promise.resolve()}
     if(!acct.on||!uid){openAccount(true);toast('Accedi o crea un profilo per condividere con una produzione');return Promise.resolve()}
     var cs=Object.keys(prods).filter(function(c){return prods[c]&&!prods[c].gone&&!prods[c].closed});
     if(!cs.length){openAccount(true);toast('Crea prima una produzione');return Promise.resolve()}
@@ -12650,26 +12834,35 @@ function aSignOut(){
 var prods={},pdUn=null,pdL={},pdJ=jget('ciak-prod-joined',{}),pdD={name:'',code:'',pick:{},open:{}},pdQ=Promise.resolve(),pdBusy={},pdSkip={},pdW={},pdErrT='',pdT=null,pdRules=false;
 function pdRef(c){return db.collection('productions').doc(c)}
 function pdMine(){return db.collection('users').doc(uid).collection('prods')}
-function pdMe(){return {name:me.name||acct.u||'Senza nome',role:me.role,g:me.g,alt:myAlt(),av:me.av||'',u:acct.u||'',ts:Date.now()}}
+function pdMe(c){var r=prRoleOf(c);return {name:me.name||acct.u||'Senza nome',role:r.role,g:me.g,alt:r.alt,av:me.av||'',u:acct.u||'',ts:Date.now()}}
 function pdName(){if(!me.name&&acct.u){me.name=acct.u;jset('ciak-team-me',me)}}
-/* ruoli unici: in una produzione un ruolo può averlo una sola persona («Altro sul set» resta sempre libero) */
+/* ruoli per produzione: ognuna ha il suo ruolo (me.pr[codice]); dove non ne scelgo uno vale quello predefinito (me.role).
+   In una produzione un ruolo può averlo una sola persona («Altro sul set» resta sempre libero) */
 var RFREE='altro';
-function pdTaken(){
-  var t={};
-  Object.keys(prods).forEach(function(c){var d=prods[c];if(!d||d.gone||d.closed)return;var M=d.members||{};
-    Object.keys(M).forEach(function(u){var m=M[u];if(u===uid||!m||!m.role||m.role===RFREE)return;if(!t[m.role])t[m.role]=m.name||'un collega'})});
+function prRoleOf(c){var o=(me.pr||{})[c];if(o&&o.role)return {role:o.role,alt:o.role===RFREE?String(o.alt||'').slice(0,30):''};return {role:me.role,alt:myAlt()}}
+function pdSetRole(c,role,alt){me.pr=me.pr||{};me.pr[c]={role:role,alt:role===RFREE?String(alt||'').replace(/\s+/g,' ').trim().slice(0,30):''};jset('ciak-team-me',me)}
+/* ruolo con cui lavoro su un progetto condiviso (codice team): quello della produzione che lo contiene; se è in più produzioni vale il più permissivo */
+function roleOfCode(tc){
+  var found=null,free=null;
+  Object.keys(prods||{}).forEach(function(c){var d=prods[c];if(!d||d.gone||d.closed||!tc||!(d.projects||{})[tc])return;var r=prRoleOf(c);if(r.role!==RFREE)found=found||r;else free=free||r});
+  return found||free||{role:me.role,alt:myAlt()};
+}
+function roleFreeFor(tc){return roleOfCode(tc).role===RFREE}
+function pdTaken(c){
+  var t={},d=prods[c];if(!d||d.gone||d.closed)return t;var M=d.members||{};
+  Object.keys(M).forEach(function(u){var m=M[u];if(u===uid||!m||!m.role||m.role===RFREE)return;if(!t[m.role])t[m.role]=m.name||'un collega'});
   return t;
 }
-/* se il mio ruolo è già di un altro (es. entro in una produzione con il ruolo predefinito già occupato) passo al primo ruolo libero; a parità di ruolo cede chi è entrato dopo */
-function pdRoleFix(){
-  if(!me.role||me.role===RFREE)return;
-  var lose=false,by='';
-  Object.keys(prods).forEach(function(c){var d=prods[c];if(!d||d.gone||d.closed)return;var M=d.members||{},mine=!!(M[uid]&&M[uid].role===me.role);
-    Object.keys(M).forEach(function(u){if(u===uid||!M[u]||M[u].role!==me.role)return;if(!mine||u<uid){lose=true;by=M[u].name||'un collega'}})});
+/* se il mio ruolo in questa produzione è già di un altro (es. entro con il ruolo predefinito già occupato) passo al primo ruolo libero; a parità di ruolo cede chi è entrato dopo */
+function pdRoleFix(c){
+  var d=prods[c];if(!d||d.gone||d.closed)return;
+  var r=prRoleOf(c);if(!r.role||r.role===RFREE)return;
+  var M=d.members||{},mine=!!(M[uid]&&M[uid].role===r.role),lose=false,by='';
+  Object.keys(M).forEach(function(u){if(u===uid||!M[u]||M[u].role!==r.role)return;if(!mine||u<uid){lose=true;by=M[u].name||'un collega'}});
   if(!lose)return;
-  var t=pdTaken(),old=me.role,n=ROLES.filter(function(r){return r[0]!==RFREE&&!t[r[0]]})[0];
-  me.role=n?n[0]:RFREE;jset('ciak-team-me',me);
-  toast('Il ruolo «'+roleLabel(old,me.g)+'» era già di '+by+': ora sei «'+roleLabel(me.role,me.g)+'». Puoi cambiarlo nella sezione Produzione.',6000);
+  var t=pdTaken(c),n=ROLES.filter(function(x){return x[0]!==RFREE&&!t[x[0]]})[0],nr=n?n[0]:RFREE;
+  pdSetRole(c,nr,'');
+  toast('Il ruolo «'+roleLabel(r.role,me.g)+'» era già di '+by+': ora sei «'+roleLabel(nr,me.g)+'». Puoi cambiarlo nella sezione Produzione.',6000);
 }
 function pdClean(c){return String(c||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'')}
 function pdE(e){var m=niceErr(e);if(e&&(e.code==='permission-denied'||/permission/i.test(e.message||'')))pdRules=true;pdErrT=m;toast(m);var x=$('#pdErr');if(x)x.textContent=m;render()}
@@ -12707,16 +12900,17 @@ function pdDrop(c){
   if(pdL[c]){pdL[c]();delete pdL[c]}
   Object.keys(pdJ).forEach(function(tc){if(pdJ[tc]===c){pdLeave(tc);delete pdJ[tc]}});jset('ciak-prod-joined',pdJ);
   if(uid&&fb){var f={};f['members.'+uid]=fb.firestore.FieldValue.delete();pdRef(c).update(f).catch(function(){})}
+  if(me.pr&&me.pr[c]){delete me.pr[c];jset('ciak-team-me',me)}
   delete prods[c];render();
 }
-function pdPres(c){pdRoleFix();pdW[c]=Date.now();var o={};o['members.'+uid]=pdMe();pdRef(c).update(o).catch(function(){})}
+function pdPres(c){pdRoleFix(c);pdW[c]=Date.now();var o={};o['members.'+uid]=pdMe(c);pdRef(c).update(o).catch(function(){})}
 function pdPresAll(){if(uid&&acct.on)Object.keys(pdL).forEach(function(c){if(prods[c]&&!prods[c].gone)pdPres(c)})}
 function pdBeat(){if(!uid||!acct.on||document.visibilityState==='hidden'||!active())return;Object.keys(pdL).forEach(function(c){if(prods[c]&&!prods[c].gone&&Date.now()-(pdW[c]||0)>80000)pdPres(c)})}
 function pdCreate(name){
   name=String(name||'').trim().slice(0,60);if(!name)return Promise.reject(new Error('Scrivi il nome della produzione'));
   pdName();var c=newCode();
   return pdRef(c).get().then(function(s){
-    if(s.exists)return pdCreate(name);var m={};m[uid]=pdMe();
+    if(s.exists)return pdCreate(name);var m={};m[uid]=pdMe(c);
     return pdRef(c).set({name:name,owner:uid,ownerName:who(),created:Date.now(),closed:false,members:m,projects:{}}).then(function(){return pdMine().doc(c).set({ts:Date.now()})}).then(function(){pdD.name='';pdD.open[c]=true;toast('Produzione creata. Codice: '+c)});
   });
 }
@@ -12735,7 +12929,7 @@ function pdShareOne(c,p){
 }
 function pdShare(c,list){
   if(!list.length)return;
-  if(me.role===RFREE){toast('Con il ruolo «'+roleLabel(me.role,me.g,me.alt)+'» puoi solo visualizzare i progetti condivisi: non puoi condividerne.',5000);return}pdBusy['s'+c]=1;pdName();render();
+  var rc=prRoleOf(c);if(rc.role===RFREE){toast('Con il ruolo «'+roleLabel(rc.role,me.g,rc.alt)+'» puoi solo visualizzare i progetti condivisi: non puoi condividerne.',5000);return}pdBusy['s'+c]=1;pdName();render();
   list.reduce(function(pr,p){return pr.then(function(){return pdShareOne(c,p)})},Promise.resolve()).then(function(){list.forEach(function(p){delete pdD.pick[c+'|'+p.key]});toast(list.length===1?'Progetto condiviso con la produzione':list.length+' progetti condivisi con la produzione')}).catch(pdE).then(function(){pdBusy['s'+c]=0;render()});
 }
 function pdUnshare(c,tc){
@@ -12780,6 +12974,16 @@ function pdProj(c,d,tc,e){
   if(acts.length)row.push(h('div',{'class':'row'},acts));
   return h('div',{'class':'pdj'},row);
 }
+/* scelta del ruolo in questa produzione (vale per ognuna, anche per il proprietario) */
+function pdRoleNodes(c){
+  var rr=prRoleOf(c),tkc=pdTaken(c),
+      rsel=h('select',{id:'pdRole'+c,'aria-label':'Il tuo ruolo in questa produzione'},ROLES.map(function(r){var bad=r[0]!==rr.role&&tkc[r[0]],o=h('option',{value:r[0],text:roleLabel(r[0],me.g)+(bad?' — già preso da '+tkc[r[0]]:'')});if(bad)o.disabled=true;if(r[0]===rr.role)o.selected=true;return o})),
+      ralt=null;
+  function ref(){render();try{pdRoomUpd()}catch(e){}}
+  if(rr.role===RFREE){ralt=h('input',{id:'pdAlt'+c,type:'text',placeholder:'Scrivi il tuo ruolo (es. Fonico, Truccatrice…)',maxlength:'30',autocomplete:'off','aria-label':'Il tuo ruolo scritto a mano',value:rr.alt||''});ralt.onchange=function(){pdSetRole(c,RFREE,ralt.value);pdPres(c);ref()}}
+  rsel.onchange=function(){var t2=pdTaken(c);if(rsel.value!==RFREE&&t2[rsel.value]){toast('Il ruolo «'+roleLabel(rsel.value,me.g)+'» è già di '+t2[rsel.value]);rsel.value=rr.role;return}pdSetRole(c,rsel.value,rr.alt);pdPres(c);ref();if(rsel.value===RFREE)setTimeout(function(){var e=document.getElementById('pdAlt'+c);if(e)e.focus()},60)};
+  return [h('h5',{'class':'pdh',text:'Il tuo ruolo in questa produzione'}),rsel,ralt];
+}
 function pdCard(c){
   var d=prods[c];
   if(d.gone)return h('div',{'class':'pdp'},[h('b',{text:'Produzione '+c}),h('div',{'class':'kv',text:'Non più disponibile.'}),h('button',{'class':'tb sm',type:'button',text:'Togli dall’elenco',onclick:function(){pdMine().doc(c).delete().catch(pdE)}})]);
@@ -12789,11 +12993,13 @@ function pdCard(c){
   var tcs=Object.keys(P).sort(function(a,b){return (P[b].ts||0)-(P[a].ts||0)}),us=Object.keys(M).sort(function(a,b){return (M[b].ts||0)-(M[a].ts||0)});
   kids.push(h('div',{'class':'row'},[h('span',{'class':'code',text:c}),h('button',{'class':'tb sm',type:'button',text:'Copia codice',onclick:function(){copy(c,'Codice copiato')}}),lk?h('button',{'class':'tb sm',type:'button',text:'Copia link d’invito',onclick:function(){copy(lk,'Link copiato')}}):null]));
   kids.push(h('div',{},us.map(function(u){return pdChip(u,M[u])})));
+  var rr=prRoleOf(c);
+  pdRoleNodes(c).forEach(function(n){kids.push(n)});
   kids.push(h('h5',{'class':'pdh',text:'Progetti condivisi ('+tcs.length+')'}));
   if(!tcs.length)kids.push(h('div',{'class':'msg',text:'Nessun progetto condiviso: sceglilo qui sotto.'}));
   tcs.forEach(function(tc){kids.push(pdProj(c,d,tc,P[tc]))});
   var cand=projectList().filter(function(p){var L=links[p.key];return !(L&&P[L.code])}),sh=[h('h5',{'class':'pdh',text:'Condividi i tuoi progetti'})];
-  if(me.role===RFREE)sh.push(h('div',{'class':'msg',text:'Con il tuo ruolo puoi solo visualizzare i progetti condivisi.'}));
+  if(rr.role===RFREE)sh.push(h('div',{'class':'msg',text:'Con il tuo ruolo puoi solo visualizzare i progetti condivisi.'}));
   else if(!cand.length)sh.push(h('div',{'class':'msg',text:'Nessun altro progetto da condividere.'}));
   else{
     cand.forEach(function(p){var kk=c+'|'+p.key,cb=h('input',{type:'checkbox'});cb.checked=!!pdD.pick[kk];cb.onchange=function(){if(cb.checked)pdD.pick[kk]=1;else delete pdD.pick[kk];render()};sh.push(h('label',{'class':'pdk'},[cb,h('span',{text:p.label})]))});
@@ -12810,13 +13016,12 @@ function pdView(b){
   var codes=Object.keys(prods).filter(function(c){return prods[c]}).sort(function(a,z){return String(prods[a].name||a).localeCompare(String(prods[z].name||z))});
   var card=h('div',{'class':'card pd'},[h('h4',{text:'Produzione'}),h('p',{'class':'msg',text:'Crea un gruppo con altre persone e scegli quali progetti condividere: tutti i membri possono aprire e modificare sceneggiatura, storyboard e produzione.'})]);
   var pn=h('input',{id:'pdMeName',type:'text',placeholder:'Il tuo nome',maxlength:'40',autocomplete:'off',value:me.name||''}),
-      tk=pdTaken(),
-      pr=h('select',{id:'pdRole','aria-label':'Il tuo ruolo'},ROLES.map(function(r){var bad=r[0]!==me.role&&tk[r[0]],o=h('option',{value:r[0],text:roleLabel(r[0],me.g)+(bad?' — già preso da '+tk[r[0]]:'')});if(bad)o.disabled=true;if(r[0]===me.role)o.selected=true;return o})),
+      pr=h('select',{id:'pdRole','aria-label':'Il tuo ruolo predefinito'},ROLES.map(function(r){var o=h('option',{value:r[0],text:roleLabel(r[0],me.g)});if(r[0]===me.role)o.selected=true;return o})),
       pg=h('select',{id:'pdG','aria-label':'Forma del ruolo'},[['M','Al maschile (es. Sceneggiatore)'],['F','Al femminile (es. Sceneggiatrice)']].map(function(r){var o=h('option',{value:r[0],text:r[1]});if(r[0]===me.g)o.selected=true;return o}));
   var pa=null;
   if(me.role===RFREE){pa=h('input',{id:'pdAlt',type:'text',placeholder:'Scrivi il tuo ruolo (es. Fonico, Truccatrice…)',maxlength:'30',autocomplete:'off','aria-label':'Il tuo ruolo scritto a mano',value:me.alt||''});pa.onchange=function(){me.alt=pa.value.replace(/\s+/g,' ').trim().slice(0,30);saveMe()}}
-  pn.onchange=function(){me.name=pn.value.trim();saveMe()};pr.onchange=function(){var t2=pdTaken();if(pr.value!==RFREE&&t2[pr.value]){toast('Il ruolo «'+roleLabel(pr.value,me.g)+'» è già di '+t2[pr.value]);pr.value=me.role;return}me.role=pr.value;saveMe();if(me.role===RFREE)setTimeout(function(){var e=$('#pdAlt');if(e)e.focus()},60)};pg.onchange=function(){me.g=pg.value;saveMe()};
-  card.appendChild(h('div',{},[h('h5',{'class':'pdh',text:'Il tuo ruolo nella produzione'}),pn,pr,pa,pg,me.role===RFREE?h('div',{'class':'kv',text:'Con «Altro sul set» puoi vedere i progetti condivisi ma non modificarli, e non puoi condividerne.'}):null,Object.keys(prods).some(function(c){return prods[c]&&!prods[c].gone&&!prods[c].closed})?h('div',{'class':'kv',text:'I ruoli già presi dagli altri membri non si possono scegliere («Altro sul set» è sempre libero: ci scrivi tu il ruolo).'}):null]));
+  pn.onchange=function(){me.name=pn.value.trim();saveMe()};pr.onchange=function(){me.role=pr.value;saveMe();if(me.role===RFREE)setTimeout(function(){var e=$('#pdAlt');if(e)e.focus()},60)};pg.onchange=function(){me.g=pg.value;saveMe()};
+  card.appendChild(h('div',{},[h('h5',{'class':'pdh',text:'Il tuo ruolo predefinito'}),pn,pr,pa,pg,me.role===RFREE?h('div',{'class':'kv',text:'Con «Altro sul set» puoi vedere i progetti condivisi ma non modificarli, e non puoi condividerne.'}):null,h('div',{'class':'kv',text:'Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.'})]));
   card.appendChild(pdList(codes));
   var nm=h('input',{id:'pdName',type:'text',placeholder:'Nome della produzione',maxlength:'60',autocomplete:'off',value:pdD.name}),cd=h('input',{id:'pdCode',type:'text',placeholder:'Codice produzione (es. K7M2QX)',maxlength:'8',autocapitalize:'characters',autocomplete:'off',value:pdD.code||pendingProd});
   var mk=function(){pdCreate(nm.value).catch(pdE)},go=function(){pdJoin(cd.value).catch(pdE)};
@@ -12988,6 +13193,7 @@ function pdPaneMembers(c,d){
       h('div',{'class':'pdmt'},[h('b',{text:(m.name||'Senza nome')+(u===uid?' (tu)':'')}),h('span',{text:roleLabel(m.role,m.g,m.alt)+(d.owner===u?' · proprietario':'')})]),
       h('span',{'class':'pdon'+(on?' on':''),title:on?'Attivo ora':'Ultima attività '+new Date(m.ts||0).toLocaleString('it-IT'),text:on?'● online':'○ offline'})]));
   });
+  pdRoleNodes(c).forEach(function(n){if(n)out.push(n)});
   out.push(h('h5',{'class':'pdh',text:'Invita altre persone'}));
   out.push(h('div',{'class':'row'},[h('span',{'class':'code',text:c}),h('button',{'class':'tb sm',type:'button',text:'Copia codice',onclick:function(){copy(c,'Codice copiato')}}),lk?h('button',{'class':'tb sm',type:'button',text:'Copia link d’invito',onclick:function(){copy(lk,'Link copiato')}}):null]));
   out.push(d.owner===uid?h('button',{'class':'tb dg',type:'button',text:'Chiudi la produzione per tutti',onclick:function(){pdClose(c)}}):h('button',{'class':'tb',type:'button',text:'Esci dalla produzione',onclick:function(){pdExit(c)}}));
@@ -12999,7 +13205,7 @@ function pdPaneProjects(c,d){
   if(!tcs.length)out.push(h('div',{'class':'msg',text:'Nessun progetto condiviso: sceglilo qui sotto.'}));
   tcs.forEach(function(tc){out.push(pdProj(c,d,tc,P[tc]))});
   var cand=projectList().filter(function(p){var L=links[p.key];return !(L&&P[L.code])}),sh=[h('h5',{'class':'pdh',text:'Condividi i tuoi progetti'})];
-  if(me.role===RFREE)sh.push(h('div',{'class':'msg',text:'Con il tuo ruolo puoi solo visualizzare i progetti condivisi.'}));
+  if(prRoleOf(c).role===RFREE)sh.push(h('div',{'class':'msg',text:'Con il tuo ruolo puoi solo visualizzare i progetti condivisi.'}));
   else if(!cand.length)sh.push(h('div',{'class':'msg',text:'Nessun altro progetto da condividere.'}));
   else{
     cand.forEach(function(p){var kk=c+'|'+p.key,cb=h('input',{type:'checkbox'});cb.checked=!!pdD.pick[kk];cb.onchange=function(){if(cb.checked)pdD.pick[kk]=1;else delete pdD.pick[kk];render()};sh.push(h('label',{'class':'pdk'},[cb,h('span',{text:p.label})]))});
@@ -14184,6 +14390,19 @@ CIAK_I18N.ext("ro",{t:{"I miei social":"Rețelele mele sociale"}});
 CIAK_I18N.ext("tr",{t:{"I miei social":"Sosyal medya hesaplarım"}});
 CIAK_I18N.ext("nl",{t:{"I miei social":"Mijn socials"}});
 CIAK_I18N.ext("uk",{t:{"I miei social":"Мої соцмережі"}});
+CIAK_I18N.ext("en",{t:{"Il tuo ruolo in questa produzione": "Your role in this production", "Il tuo ruolo predefinito": "Your default role", "Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.": "You can pick a different role for each production, in its own card. The one above applies to productions where you haven't picked one."}});
+CIAK_I18N.ext("es",{t:{"Il tuo ruolo in questa produzione": "Tu función en esta producción", "Il tuo ruolo predefinito": "Tu función predeterminada", "Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.": "Puedes elegir una función distinta para cada producción, en su ficha. La de arriba vale para las producciones en las que no elijas una."}});
+CIAK_I18N.ext("fr",{t:{"Il tuo ruolo in questa produzione": "Votre rôle dans cette production", "Il tuo ruolo predefinito": "Votre rôle par défaut", "Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.": "Vous pouvez choisir un rôle différent pour chaque production, dans sa fiche. Celui du dessus s’applique aux productions où vous n’en choisissez pas."}});
+CIAK_I18N.ext("pt",{t:{"Il tuo ruolo in questa produzione": "Sua função nesta produção", "Il tuo ruolo predefinito": "Sua função padrão", "Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.": "Você pode escolher uma função diferente para cada produção, no cartão dela. A de cima vale para as produções em que você não escolher uma."}});
+CIAK_I18N.ext("de",{t:{"Il tuo ruolo in questa produzione": "Ihre Rolle in dieser Produktion", "Il tuo ruolo predefinito": "Ihre Standardrolle", "Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.": "Sie können für jede Produktion eine andere Rolle wählen, in der jeweiligen Karte. Die obige gilt für Produktionen, in denen Sie keine wählen."}});
+CIAK_I18N.ext("pl",{t:{"Il tuo ruolo in questa produzione": "Twoja rola w tej produkcji", "Il tuo ruolo predefinito": "Twoja domyślna rola", "Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.": "Dla każdej produkcji możesz wybrać inną rolę, na jej karcie. Rola powyżej obowiązuje w produkcjach, w których żadnej nie wybierzesz."}});
+CIAK_I18N.ext("ru",{t:{"Il tuo ruolo in questa produzione": "Ваша роль в этом продакшне", "Il tuo ruolo predefinito": "Ваша роль по умолчанию", "Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.": "Для каждого продакшна можно выбрать свою роль — в его карточке. Роль выше действует там, где вы не выбрали другую."}});
+CIAK_I18N.ext("sv",{t:{"Il tuo ruolo in questa produzione": "Din roll i den här produktionen", "Il tuo ruolo predefinito": "Din standardroll", "Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.": "Du kan välja en annan roll för varje produktion, i dess kort. Rollen ovan gäller för produktioner där du inte väljer någon."}});
+CIAK_I18N.ext("el",{t:{"Il tuo ruolo in questa produzione": "Ο ρόλος σας σε αυτή την παραγωγή", "Il tuo ruolo predefinito": "Ο προεπιλεγμένος ρόλος σας", "Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.": "Μπορείτε να διαλέξετε διαφορετικό ρόλο για κάθε παραγωγή, στην κάρτα της. Ο παραπάνω ισχύει για τις παραγωγές όπου δεν επιλέγετε κάποιον."}});
+CIAK_I18N.ext("ro",{t:{"Il tuo ruolo in questa produzione": "Rolul tău în această producție", "Il tuo ruolo predefinito": "Rolul tău implicit", "Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.": "Poți alege un rol diferit pentru fiecare producție, în fișa ei. Cel de mai sus se aplică producțiilor în care nu alegi unul."}});
+CIAK_I18N.ext("tr",{t:{"Il tuo ruolo in questa produzione": "Bu yapımdaki rolünüz", "Il tuo ruolo predefinito": "Varsayılan rolünüz", "Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.": "Her yapım için kendi kartında farklı bir rol seçebilirsiniz. Yukarıdaki rol, birini seçmediğiniz yapımlarda geçerlidir."}});
+CIAK_I18N.ext("nl",{t:{"Il tuo ruolo in questa produzione": "Je rol in deze productie", "Il tuo ruolo predefinito": "Je standaardrol", "Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.": "Je kunt voor elke productie een andere rol kiezen, op de kaart ervan. De rol hierboven geldt voor producties waarin je er geen kiest."}});
+CIAK_I18N.ext("uk",{t:{"Il tuo ruolo in questa produzione": "Ваша роль у цьому виробництві", "Il tuo ruolo predefinito": "Ваша роль за замовчуванням", "Puoi scegliere un ruolo diverso per ogni produzione, nella scheda di ciascuna. Quello qui sopra vale per le produzioni in cui non ne scegli uno.": "Для кожного виробництва можна обрати іншу роль — у його картці. Роль вище діє там, де ви не обрали іншу."}});
 </script>
 <script id="i18n-storyboard">
 /* ===== CIAK i18n: traduzioni storyboard (arredi + funzioni nuove) =====
