@@ -7226,7 +7226,8 @@ function imRefHtml(C){
 }
 function imKey(C){return [C.kw.join(' '),C.genre,C.fest48,C.min,imKeyYt()?1:0,imApiBase()].join('|')}
 function imBindFetch(C){var k=imKey(C);if(imCache[k])imShow(imCache[k])}
-function imApiBase(){try{return (localStorage.getItem('ciak-im-api')||'').replace(/\/+$/,'')}catch(e){return ''}}
+var IM_API_DEFAULT='https://ciak-search.alessiomorrone11.workers.dev';   /* server di ricerca predefinito; un indirizzo diverso scritto in «Fonti» ha la precedenza */
+function imApiBase(){var v='';try{v=localStorage.getItem('ciak-im-api')||''}catch(e){}v=(v||IM_API_DEFAULT).trim();if(v&&!/^https?:\/\//i.test(v))v='https://'+v;return v.replace(/\/+$/,'')}
 function imApi(path,params){var b=imApiBase();return fetch(b+path+'?'+new URLSearchParams(params),{signal:imAb&&imAb.signal}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j&&j.error||('errore '+r.status));return j})})}
 function imKeyYt(){try{return localStorage.getItem('ciak-im-yt')||''}catch(e){return ''}}
 function imWiki(lang,q){
