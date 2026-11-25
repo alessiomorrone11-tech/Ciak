@@ -2882,20 +2882,29 @@ function carryApply(w,att,els){
   });
 }
 /* poligono 3D tagliato sul piano vicino e proiettato: restituisce i punti SVG oppure stringa vuota */
+var _psD=[],LODPX=10;
 function polyStr(PR,pts){
-  var n=NEAR,out=[],i,m=pts.length,d=pts.map(function(q){return PR.dep(q[0],q[1],q[2])});
-  for(i=0;i<m;i++){
-    var j=(i+1)%m,a=pts[i],b=pts[j],da=d[i],db=d[j];
-    if(da>=n)out.push(a);
-    if((da>=n)!==(db>=n)){var t=(n-da)/(db-da);out.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t])}
+  var n=NEAR,m=pts.length,i,q,d=_psD,ox=PR.ox,oy=PR.oy,oz=PR.oz,ca=PR.ca,cb=PR.cb,sp=PR.sp,allIn=true;
+  for(i=0;i<m;i++){q=pts[i];d[i]=(q[0]-ox)*ca+(q[1]-oy)*cb+(q[2]-oz)*sp;if(d[i]<n)allIn=false}
+  var out=pts,om=m;
+  if(!allIn){
+    out=[];
+    for(i=0;i<m;i++){
+      var j=(i+1)%m,a=pts[i],b=pts[j],da=d[i],db=d[j];
+      if(da>=n)out.push(a);
+      if((da>=n)!==(db>=n)){var t=(n-da)/(db-da);out.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t])}
+    }
+    om=out.length;
   }
-  if(out.length<3)return '';
+  if(om<3)return '';
   /* i poligoni interamente fuori dal quadro non si disegnano (l'immagine resta identica, l'SVG e il DOM molto più leggeri) */
-  var VW=PR.W,VH=PR.H,x0=1e9,x1=-1e9,y0=1e9,y1=-1e9,k,r,str='';
-  for(k=0;k<out.length;k++){
-    r=PR.pt(out[k][0],out[k][1],out[k][2]);
-    if(r[0]<x0)x0=r[0];if(r[0]>x1)x1=r[0];if(r[1]<y0)y0=r[1];if(r[1]>y1)y1=r[1];
-    str+=(k?' ':'')+r[0].toFixed(1)+','+r[1].toFixed(1);
+  var VW=PR.W,VH=PR.H,hw=VW/2,hh=VH/2,fpx=PR.fpx,cy=PR.cy,sy=PR.sy,cp=PR.cp,mn=n*0.6,x0=1e9,x1=-1e9,y0=1e9,y1=-1e9,k,str='',dx,dy,dz,dd,kk,px,py;
+  for(k=0;k<om;k++){
+    q=out[k];dx=q[0]-ox;dy=q[1]-oy;dz=q[2]-oz;
+    dd=dx*ca+dy*cb+dz*sp;if(dd<mn)dd=mn;kk=fpx/dd;
+    px=hw+(-dx*sy+dy*cy)*kk;py=hh-(-sp*(dx*cy+dy*sy)+cp*dz)*kk;
+    if(px<x0)x0=px;if(px>x1)x1=px;if(py<y0)y0=py;if(py>y1)y1=py;
+    str+=(k?' ':'')+px.toFixed(1)+','+py.toFixed(1);
   }
   if(VW>0&&(x1<-4||x0>VW+4||y1<-4||y0>VH+4))return '';
   return str;
@@ -2985,7 +2994,7 @@ function camProj(cam,W,H){
   var yaw=cam.rot*Math.PI/180,pitch=clamp(cam.tilt||0,-90,90)*Math.PI/180;
   var cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch),fpx=(W/2)/Math.tan(fovOf(cam.lens)/2);
   return {
-    fpx:fpx,W:W,H:H,
+    fpx:fpx,W:W,H:H,ox:cam.x,oy:cam.y,oz:cam.h,ca:cy*cp,cb:sy*cp,cy:cy,sy:sy,cp:cp,sp:sp,
     hy:H/2+fpx*Math.tan(clamp(pitch,-1.5707,1.5707)),
     dep:function(x,y,z){return (x-cam.x)*cy*cp+(y-cam.y)*sy*cp+(z-cam.h)*sp},
     pt:function(x,y,z){
@@ -3112,8 +3121,25 @@ function drawObjSmooth(p,cam,e,PR,L){
   walls.forEach(function(w){var c=shade(L,w.f);out+='<polygon points="'+w.pts+'" fill="'+c+'" stroke="'+c+'" stroke-width=".6"/>'});
   return out+hlImgSVG(e,cam,PR,z0,L)+tops;
 }
-function drawObj(p,cam,e,PR,L){
-  if((+e.bv||0)>0.002||(+e.bb||0)>0.002)return drawObjSmooth(p,cam,e,PR,L); /* oggetto con smussi o curve */
+/* Cache del disegno di ogni pezzo: se pezzo, camera, luce e appoggio non cambiano, il disegno è già pronto.
+   Trascinando un mobile con la camera ferma si ridisegna solo quello, non tutti gli altri. */
+var DRC=new WeakMap();
+function drawObjC(p,cam,e,PR,L,lod){
+  if(e.img)return drawObj(p,cam,e,PR,L,lod);
+  var z0=objZ(e),zs=z0>0?supportZ(e,p.els):0,ow=owEnt(e); /* owEnt cambia identità quando cambiano posizione, rotazione o forme */
+  var key=PR.W+'|'+PR.H+'|'+cam.x+','+cam.y+','+cam.h+','+cam.rot+','+(cam.tilt||0)+','+cam.lens+'|'+L.k+','+L.c[0]+','+L.c[1]+','+L.c[2]+'|'+zs+'|'+(lod?1:0)+'|'+z0+','+e.h+','+(e.bv||0)+','+(e.bb||0)+','+(e.tp||0);
+  var c=DRC.get(e),i;
+  if(!c||c.ow!==ow){c={ow:ow,k:[],v:[]};DRC.set(e,c)}
+  i=c.k.indexOf(key);
+  if(i>=0)return c.v[i];
+  var s=drawObj(p,cam,e,PR,L,lod);
+  /* il disegno si conserva solo alla seconda richiesta con la stessa chiave: con la camera che si muove a ogni fotogramma non si trattiene nulla */
+  if(c.last===key){if(c.k.length>=3){c.k.shift();c.v.shift()}c.k.push(key);c.v.push(s)}
+  c.last=key;
+  return s;
+}
+function drawObj(p,cam,e,PR,L,lod){
+  if(!lod&&((+e.bv||0)>0.002||(+e.bb||0)>0.002))return drawObjSmooth(p,cam,e,PR,L); /* oggetto con smussi o curve */
   var polys=objWorld(e),n=polys.length,walls=[],shadow='',tops='',tc=shade(L,1),z0=objZ(e),zs=z0>0?supportZ(e,p.els):0,showTop=cam.h>z0+e.h,showBot=z0>0.005&&cam.h<z0,bots='',bc=shade(L,0.42);
   var cyw=Math.cos(cam.rot*Math.PI/180),syw=Math.sin(cam.rot*Math.PI/180);
   var tk=1-clamp(+e.tp||0,-0.5,0.8); /* restringimento in cima: 0 = dritto, >0 si stringe, <0 si allarga */
@@ -3296,6 +3322,13 @@ function drawFig(e,cam,PR,L){
   return pcs2.map(function(x){return x.s}).join('');
 }
 /* T = istante della simulazione in secondi; se manca si disegna la posa di partenza */
+/* sfera (centro x,y,z e raggio R, in metri) interamente fuori dal quadro: non serve disegnarla né ordinarla */
+function offView(PR,x,y,z,R){
+  var dx=x-PR.ox,dy=y-PR.oy,dz=z-PR.oz,d=dx*PR.ca+dy*PR.cb+dz*PR.sp;
+  if(d<=R*1.8)return false; /* vicina o dietro: si lascia al taglio dei poligoni */
+  var k=PR.fpx/d,rr=R*1.8*k,sx=PR.W/2+(-dx*PR.sy+dy*PR.cy)*k,sy=PR.H/2-(-PR.sp*(dx*PR.cy+dy*PR.sy)+PR.cp*dz)*k;
+  return sx+rr<-4||sx-rr>PR.W+4||sy+rr<-4||sy-rr>PR.H+4;
+}
 function previewSVG(p,cam0,hud,T,opt){
   var W=(opt&&opt.W)||640,H=(opt&&opt.H)||Math.round(W/ratio());
   var out='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">';
@@ -3336,7 +3369,7 @@ function previewSVG(p,cam0,hud,T,opt){
     var oc=e.type==='object'?objCtr(e):[e.x,e.y],oz=mk3?(e.type==='light'?2:e.h):(objZ(e)+e.h/2);
     if(e.type==='subject'&&!mk3){var sp0=e.post||(e.h<1.45?'sit':'stand'),su=e.h/1.75;if(sp0==='lie')oz=objZ(e)+0.15;else if(sp0==='prop'){oc=[e.x+Math.cos(e.rot*Math.PI/180)*0.4*su,e.y+Math.sin(e.rot*Math.PI/180)*0.4*su];oz=objZ(e)+0.3}}
     var d=PR.dep(oc[0],oc[1],oz); /* ordine di disegno: centro reale delle forme */
-    if(e.type==='object'){if(d+objStats(e).r+e.h/2<NEAR)return}
+    if(e.type==='object'){if(d+objStats(e).r+e.h/2<NEAR)return;if(offView(PR,oc[0],oc[1],oz,objStats(e).r+e.h/2))return}
     else if(d<(e.type==='subject'?0.42:0.3))return;
     items.push({e:e,depth:d});
   });
@@ -3360,7 +3393,7 @@ function previewSVG(p,cam0,hud,T,opt){
     }else{
       var tp=PR.pt(e.x,e.y,objZ(e)+e.h),md=PR.pt(e.x,e.y,objZ(e)+e.h/2);
       if(e.h*md[3]<2)return;
-      out+=drawObj(p,cam,e,PR,L);
+      out+=drawObjC(p,cam,e,PR,L,objStats(e).r*2*md[3]<LODPX*((hud||opt)?1:3));
       if((hud||lab)&&tp[1]>16&&tp[2]>0.3&&arrLabel(e,els))out+='<text x="'+tp[0]+'" y="'+(tp[1]-6)+'" text-anchor="middle" fill="#fff" fill-opacity=".6" font-family="IBM Plex Mono,monospace" font-size="11">'+esc(arrName(e,els))+'</text>';
     }
   });
@@ -4050,10 +4083,12 @@ function renderPreviewHead(){
   s.disabled=!cams.length;
 }
 $('#camSel').addEventListener('change',function(ev){cur().cam=ev.target.value;refreshLive();commit()});
+var pvKey=null;
 function renderPreview(){
   var p=cur(),c=camOf(p);
   $('#pv').style.aspectRatio=String(ratio());
-  $('#pv').innerHTML=previewSVG(p,c,true,simOn()?sim.T:null);
+  var pk=simOn()?null:(S.aspect+'|'+JSON.stringify(S.world)+'|'+sel+'|'+stopFocusFor+'|'+selStop+'|'+selStopFor+'|'+JSON.stringify(p));
+  if(pk===null||pk!==pvKey||!$('#pv').firstChild){pvKey=pk;$('#pv').innerHTML=previewSVG(p,c,true,simOn()?sim.T:null)}
   var lights=p.els.filter(function(e){return e.type==='light'&&e.on!==false});
   var sp=[];
   if(c)c=focusPose(c);
@@ -4067,7 +4102,7 @@ function renderPreview(){
 }
 
 /* ---------- striscia inquadrature ---------- */
-var stripC=new Map(),stripLast=0,stripTm=0;
+var stripC=new Map(),stripLast=0,stripTm=0,stripHtml='';
 function stripThumb(p,fast){
   var key=S.aspect+'|'+JSON.stringify(S.world)+'|'+JSON.stringify(p),c=stripC.get(p.id);
   if(c&&c.key===key)return {h:c.h,late:false};
@@ -4083,7 +4118,7 @@ function renderStrip(){
     var t=stripThumb(p,fast);if(t.late)late=true;live[p.id]=1;
     return '<button class="thumb" data-p="'+i+'" aria-current="'+(i===S.cur)+'"><div class="fr">'+t.h+'</div><div class="cap"><b>'+String(i+1).padStart(2,'0')+'</b><span>'+esc(p.title||'Senza titolo')+'</span><em>'+esc(p.shot)+'</em></div></button>';
   }).join('');
-  $('#strip').innerHTML=html;
+  if(html!==stripHtml){stripHtml=html;$('#strip').innerHTML=html}
   stripC.forEach(function(v,id){if(!live[id])stripC.delete(id)});
   clearTimeout(stripTm);stripTm=0;
   if(late)stripTm=setTimeout(function(){stripTm=0;if(S&&curId&&view!=='home')renderStrip()},260);
@@ -6335,7 +6370,12 @@ function walkFrame(ts){
     if(wk.T>=tot){wk.T=tot;wk.playing=false}
     ch=true;walkSyncUI();
   }
-  if(ch||wk.dirty){wk.dirty=false;walkDraw()}
+  var mv=ch||!!wk.drag||!!wk.pinch;
+  if(ch||wk.dirty||(wk.fast&&!mv)){
+    wk.dirty=false;wk.fast=mv;
+    LODPX=mv?1e9:10; /* in movimento niente smussi a fasce (molti meno poligoni); appena ci si ferma torna il dettaglio pieno */
+    try{walkDraw()}finally{LODPX=10}
+  }
   wk.raf=requestAnimationFrame(walkFrame);
 }
 function walkGo(v){
