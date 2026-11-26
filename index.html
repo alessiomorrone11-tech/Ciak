@@ -789,9 +789,34 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
     </section>
     <section id="hubPr" hidden>
       <div class="homebar"><h2>Produzione <span id="edHubCount"></span></h2></div>
-      <div class="tabs" role="tablist" style="margin:0 0 14px;display:inline-flex"><button role="tab" aria-selected="true">Edizione</button></div>
+      <div class="tabs" role="tablist" style="margin:0 0 14px;display:inline-flex"><button role="tab" id="prTabEd" aria-selected="true">Edizione</button><button role="tab" id="prTabPp" aria-selected="false">Pre-produzione</button></div>
+      <div id="prPaneEd">
       <p class="hint" style="margin:0 0 14px">Bollettino d'edizione: un modulo per ogni progetto storyboard, con 18 righe per pagina, PDF e stampa in A4 orizzontale. Si apre solo da qui, non dentro lo storyboard.</p>
       <div class="projects" id="edHubList"></div>
+      </div>
+      <div id="prPanePp" hidden>
+        <div class="ppbar">
+          <label class="pplbl" for="ppProj">Progetto</label><select id="ppProj"></select>
+          <div class="tabs" role="tablist" style="display:inline-flex"><button role="tab" id="ppTabMb" aria-selected="true">Mood board</button><button role="tab" id="ppTabCh" aria-selected="false">Schede personaggio</button></div>
+        </div>
+        <div id="ppEmpty" class="noproj" hidden>Nessun progetto storyboard in questo browser: mood board e schede personaggio si compilano per ogni progetto.</div>
+        <div id="ppMood">
+          <p class="hint" style="margin:0 0 12px">Raccogli immagini di riferimento, una tavolozza di colori e appunti sullo stile visivo del progetto.</p>
+          <div class="ppact"><button type="button" class="btn primary" id="mbAddImg">Aggiungi immagini</button><input type="file" id="mbFile" accept="image/*" multiple hidden></div>
+          <div class="ppgrid" id="mbGrid"></div>
+          <h3 class="pph">Tavolozza</h3>
+          <div class="ppsw" id="mbSw"></div>
+          <div class="ppact"><input type="color" id="mbColor" value="#c8a24a" aria-label="Colore"><button type="button" class="btn" id="mbAddCol">Aggiungi colore</button></div>
+          <h3 class="pph">Appunti di stile</h3>
+          <textarea id="mbNote" rows="5" placeholder="Atmosfera, luce, riferimenti, palette, texture…"></textarea>
+        </div>
+        <div id="ppChars" hidden>
+          <p class="hint" style="margin:0 0 12px">Una scheda per ogni personaggio: aspetto, carattere, costume e note.</p>
+          <div class="ppact"><button type="button" class="btn primary" id="chAdd">Nuovo personaggio</button></div>
+          <div class="ppchars" id="chList"></div>
+        </div>
+        <p class="hint" style="margin-top:16px">Salvato automaticamente in questo browser, per ogni progetto.</p>
+      </div>
     </section>
     <section id="hubHw" hidden>
       <div id="hwList">
@@ -15297,6 +15322,185 @@ var seen=false;try{seen=localStorage.getItem(K)==='1'}catch(e){}
 if(seen)return;
 n.hidden=false;b.focus();
 b.addEventListener('click',function(){n.hidden=true;try{localStorage.setItem(K,'1')}catch(e){}});
+})();
+</script>
+<style>
+.ppbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 16px}
+.pplbl{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.08em;font-size:14px;color:var(--muted)}
+#ppProj{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;max-width:100%}
+.ppact{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px}
+.pph{margin:22px 0 8px}
+.ppgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr));gap:10px}
+.ppimg{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
+.ppimg img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#1b1e23}
+.ppimg .ppc{display:flex;gap:4px;padding:6px}
+.ppimg input{flex:1;min-width:0}
+.ppsw{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
+.ppsw button{width:56px;height:56px;border-radius:8px;border:1px solid var(--line);padding:0;position:relative;font:11px var(--font-mono);color:#fff;text-shadow:0 0 3px #000;display:flex;align-items:flex-end;justify-content:center}
+#prPanePp input[type=text],#prPanePp input:not([type]),#prPanePp textarea{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:14px;width:100%;box-sizing:border-box}
+#prPanePp textarea{resize:vertical}
+#prPanePp .ppimg input{width:auto}
+.ppchars{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:14px}
+.ppch{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.ppch .pphoto{width:100%;aspect-ratio:4/3;border:1px dashed var(--line);border-radius:8px;background:var(--surface2);color:var(--muted);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0}
+.ppch .pphoto img{width:100%;height:100%;object-fit:cover;display:block}
+.ppch label{font-size:11px;font-family:var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.ppch .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+</style>
+<script>
+/* Produzione › Pre-produzione: mood board e schede personaggio (dati in una chiave a parte per ogni progetto) */
+(function(){
+var Q=function(s){return document.querySelector(s)};
+var tEd=Q('#prTabEd'),tPp=Q('#prTabPp'),pEd=Q('#prPaneEd'),pPp=Q('#prPanePp');
+if(!tEd||!tPp||!pEd||!pPp)return;
+var sel=Q('#ppProj'),tMb=Q('#ppTabMb'),tCh=Q('#ppTabCh'),vMb=Q('#ppMood'),vCh=Q('#ppChars'),emp=Q('#ppEmpty');
+var MAXIMG=24,D=null,cur='',arm=null,armT=null;
+function toast(m){var t=Q('#toast');if(!t)return;t.textContent=m;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(function(){t.classList.remove('on')},2200)}
+function uid(){return Math.random().toString(36).slice(2,9)}
+function key(id){return 'ciak-pre-'+id}
+function blank(){return {mood:{imgs:[],cols:[],note:''},chars:[]}}
+function load(id){
+  var d=blank();
+  try{var r=localStorage.getItem(key(id));if(r){var o=JSON.parse(r);
+    if(o&&o.mood){d.mood.imgs=Array.isArray(o.mood.imgs)?o.mood.imgs:[];d.mood.cols=Array.isArray(o.mood.cols)?o.mood.cols:[];d.mood.note=String(o.mood.note||'')}
+    if(o&&Array.isArray(o.chars))d.chars=o.chars}}catch(e){}
+  return d;
+}
+var st=null;
+function saveNow(){
+  if(!cur||!D)return true;
+  if(!D.mood.imgs.length&&!D.mood.cols.length&&!D.mood.note&&!D.chars.length){try{localStorage.removeItem(key(cur))}catch(e){}return true}
+  try{localStorage.setItem(key(cur),JSON.stringify(D));return true}
+  catch(e){toast('Memoria del browser piena: elimina qualche immagine');return false}
+}
+function save(){clearTimeout(st);st=setTimeout(saveNow,350)}
+function h(tag,attrs,kids){
+  var e=document.createElement(tag),k;
+  for(k in (attrs||{})){if(k==='text')e.textContent=attrs[k];else if(k==='on'){for(var ev in attrs.on)e.addEventListener(ev,attrs.on[ev])}else e.setAttribute(k,attrs[k])}
+  (kids||[]).forEach(function(c){if(c)e.appendChild(c)});
+  return e;
+}
+function readIndex(){try{var a=JSON.parse(localStorage.getItem('ciak-index-v2')||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
+function fillProjects(){
+  var idx=readIndex().slice().sort(function(a,b){return (b.updated||0)-(a.updated||0)}),keep=cur;
+  if(!keep){try{keep=localStorage.getItem('ciak-pre-last')||''}catch(e){}}
+  sel.innerHTML='';
+  idx.forEach(function(m){sel.appendChild(h('option',{value:m.id,text:m.title||'Senza titolo'}))});
+  var has=idx.length>0;
+  emp.hidden=has;sel.hidden=!has;tMb.parentNode.style.display=has?'inline-flex':'none';
+  if(!has){cur='';D=null;vMb.hidden=true;vCh.hidden=true;return}
+  cur=idx.some(function(m){return m.id===keep})?keep:idx[0].id;
+  sel.value=cur;D=load(cur);sub(tCh.getAttribute('aria-selected')==='true'?'ch':'mb');
+}
+function sub(w){
+  var ch=w==='ch';
+  tMb.setAttribute('aria-selected',!ch);tCh.setAttribute('aria-selected',ch);
+  vMb.hidden=ch||!D;vCh.hidden=!ch||!D;
+  if(!D)return;
+  if(ch)drawCh();else drawMb();
+}
+/* ridimensiona l'immagine: lato lungo max 900 px, JPEG leggero */
+function shrink(f,max,cb){
+  if(!f||!/^image\//.test(f.type||'')){cb(null);return}
+  var u=URL.createObjectURL(f),im=new Image();
+  im.onload=function(){
+    try{
+      var r=Math.min(1,max/Math.max(im.width,im.height)),w=Math.max(1,Math.round(im.width*r)),hh=Math.max(1,Math.round(im.height*r));
+      var c=document.createElement('canvas');c.width=w;c.height=hh;var g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,w,hh);g.drawImage(im,0,0,w,hh);
+      var q=.78,d=c.toDataURL('image/jpeg',q);
+      while(d.length>130000&&q>.35){q-=.1;d=c.toDataURL('image/jpeg',q)}
+      URL.revokeObjectURL(u);cb(d);
+    }catch(e){URL.revokeObjectURL(u);cb(null)}
+  };
+  im.onerror=function(){URL.revokeObjectURL(u);cb(null)};
+  im.src=u;
+}
+/* ---- mood board ---- */
+function drawMb(){
+  var g=Q('#mbGrid');g.innerHTML='';
+  D.mood.imgs.forEach(function(it,i){
+    var cap=h('input',{type:'text',placeholder:'Didascalia','aria-label':'Didascalia',maxlength:'80'});cap.value=it.cap||'';
+    cap.addEventListener('input',function(){it.cap=cap.value;save()});
+    var del=h('button',{type:'button','class':'btn danger',text:'×','aria-label':'Elimina immagine',on:{click:function(){D.mood.imgs.splice(i,1);saveNow();drawMb()}}});
+    g.appendChild(h('div',{'class':'ppimg'},[h('img',{src:it.src,alt:it.cap||'Immagine di riferimento'}),h('div',{'class':'ppc'},[cap,del])]));
+  });
+  var sw=Q('#mbSw');sw.innerHTML='';
+  D.mood.cols.forEach(function(c,i){
+    sw.appendChild(h('button',{type:'button',style:'background:'+c,title:'Clicca per rimuovere '+c,'aria-label':'Rimuovi colore '+c,text:c,on:{click:function(){D.mood.cols.splice(i,1);saveNow();drawMb()}}}));
+  });
+  Q('#mbNote').value=D.mood.note||'';
+}
+Q('#mbAddImg').addEventListener('click',function(){Q('#mbFile').click()});
+Q('#mbFile').addEventListener('change',function(){
+  var fs=Array.prototype.slice.call(this.files||[]),inp=this;
+  if(!D||!fs.length)return;
+  var room=MAXIMG-D.mood.imgs.length;
+  if(room<=0){toast('Massimo '+MAXIMG+' immagini per progetto');inp.value='';return}
+  if(fs.length>room){toast('Aggiungo solo le prime '+room+' immagini (massimo '+MAXIMG+')');fs=fs.slice(0,room)}
+  var left=fs.length,id=cur;
+  fs.forEach(function(f){shrink(f,900,function(d){
+    if(d&&id===cur&&D)D.mood.imgs.push({id:uid(),src:d,cap:''});
+    else if(!d)toast('Impossibile leggere un file immagine');
+    if(--left===0&&id===cur&&D){if(!saveNow())D.mood.imgs.length=Math.max(0,D.mood.imgs.length-fs.length);drawMb()}
+  })});
+  inp.value='';
+});
+Q('#mbAddCol').addEventListener('click',function(){
+  if(!D)return;var c=Q('#mbColor').value;
+  if(D.mood.cols.indexOf(c)<0&&D.mood.cols.length<24){D.mood.cols.push(c);saveNow();drawMb()}
+});
+Q('#mbNote').addEventListener('input',function(){if(D){D.mood.note=this.value;save()}});
+/* ---- schede personaggio ---- */
+var CF=[['name','Nome',1],['role','Ruolo',1],['age','Età',1],['look','Aspetto fisico',2],['traits','Carattere',2],['costume','Costume e trucco',2],['notes','Note',2]];
+function drawCh(){
+  var L=Q('#chList');L.innerHTML='';
+  if(!D.chars.length){L.appendChild(h('p',{'class':'noproj',text:'Nessun personaggio: aggiungine uno con «Nuovo personaggio».'}));return}
+  D.chars.forEach(function(c,i){
+    var ph=h('button',{type:'button','class':'pphoto','aria-label':'Scegli la foto del personaggio'},[]);
+    if(c.img)ph.appendChild(h('img',{src:c.img,alt:c.name||'Personaggio'}));else ph.textContent='Aggiungi foto';
+    var fi=h('input',{type:'file',accept:'image/*',hidden:''});
+    ph.addEventListener('click',function(){fi.click()});
+    fi.addEventListener('change',function(){var f=fi.files&&fi.files[0];if(!f)return;shrink(f,600,function(d){if(!d){toast('Impossibile leggere il file immagine');return}var old=c.img;c.img=d;if(!saveNow())c.img=old;drawCh()})});
+    var card=h('div',{'class':'ppch'},[ph,fi]);
+    var row=null;
+    CF.forEach(function(f){
+      var el=f[2]===2?h('textarea',{rows:f[0]==='look'||f[0]==='traits'?'3':'2'}):h('input',{type:'text',maxlength:'60'});
+      el.value=c[f[0]]||'';
+      el.addEventListener('input',function(){c[f[0]]=el.value;save()});
+      var lab=h('label',{text:f[1]},[el]);
+      if(f[2]===1){
+        if(!row||row.n>=3){row=h('div',{'class':'two'},[]);row.n=0;card.appendChild(row)}
+        row.appendChild(lab);row.n++;
+      }else{row=null;card.appendChild(lab)}
+    });
+    var armed=arm===c.id;
+    var rm=h('button',{type:'button','class':'btn danger',text:armed?'Conferma':'Elimina scheda'});
+    rm.addEventListener('click',function(){
+      if(arm!==c.id){arm=c.id;clearTimeout(armT);armT=setTimeout(function(){arm=null;if(D&&!vCh.hidden)drawCh()},3000);drawCh();return}
+      clearTimeout(armT);arm=null;D.chars.splice(i,1);saveNow();drawCh();
+    });
+    card.appendChild(rm);L.appendChild(card);
+  });
+}
+Q('#chAdd').addEventListener('click',function(){
+  if(!D)return;D.chars.push({id:uid(),img:'',name:'',role:'',age:'',look:'',traits:'',costume:'',notes:''});saveNow();drawCh();
+  var l=Q('#chList .ppch:last-child input[type=text]');if(l)l.focus();
+});
+/* schede e progetto */
+sel.addEventListener('change',function(){saveNow();cur=sel.value;try{localStorage.setItem('ciak-pre-last',cur)}catch(e){}D=load(cur);arm=null;sub(tCh.getAttribute('aria-selected')==='true'?'ch':'mb')});
+tMb.addEventListener('click',function(){sub('mb')});
+tCh.addEventListener('click',function(){sub('ch')});
+function pane(pp){
+  saveNow();
+  tEd.setAttribute('aria-selected',!pp);tPp.setAttribute('aria-selected',pp);
+  pEd.hidden=pp;pPp.hidden=!pp;
+  if(pp)fillProjects();
+}
+tEd.addEventListener('click',function(){pane(false)});
+tPp.addEventListener('click',function(){pane(true)});
+['#hubTSb','#hubTSw','#hubTPr'].forEach(function(s){var e=Q(s);if(e)e.addEventListener('click',function(){saveNow();if(s==='#hubTPr'&&!pPp.hidden)fillProjects()})});
+window.addEventListener('pagehide',saveNow);
+document.addEventListener('visibilitychange',function(){if(document.hidden)saveNow()});
 })();
 </script>
 </body></html>
