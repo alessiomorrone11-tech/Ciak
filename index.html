@@ -15266,4 +15266,37 @@ Object.keys(X).forEach(function(code){
 })();
 </script>
 <script>CIAK_I18N.init();</script>
-<div style="text-align:center;font:12px sans-serif;opacity:.6;padding:6px">© 2026 Alessio Morrone. Tutti i diritti riservati.</div></body></html>
+<div style="text-align:center;font:12px sans-serif;opacity:.6;padding:6px">© 2026 Alessio Morrone. Tutti i diritti riservati.</div><style>
+#cpNotice{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.72)}
+#cpNotice[hidden]{display:none}
+#cpNotice .cpbox{max-width:520px;width:100%;max-height:100%;overflow:auto;background:var(--surface,#1b1e23);color:var(--ink,#eee);border:1px solid var(--line,#2f3a44);border-radius:14px;padding:24px;line-height:1.55;font-size:15px}
+#cpNotice h2{margin:0 0 14px}
+#cpNotice h3{margin:16px 0 6px}
+#cpNotice p{margin:0 0 8px}
+#cpNotice a{color:var(--accent,#e5a93b)}
+#cpNotice .cpok{margin-top:18px;width:100%}
+</style>
+<div id="cpNotice" role="dialog" aria-modal="true" aria-labelledby="cpTitle" hidden>
+  <div class="cpbox notranslate" translate="no">
+    <h2 id="cpTitle">Norme sul copyright</h2>
+    <h3>Ciak</h3>
+    <p>App di storyboard 3D, sceneggiatura e produzione finalizzata al lavoro in tutte le fasi di sviluppo di un prodotto audiovisivo.</p>
+    <h3>Utilizzo</h3>
+    <p>L'app è disponibile online al seguente link:<br><a href="https://alessiomorrone11-tech.github.io/Ciak/" target="_blank" rel="noopener noreferrer">https://alessiomorrone11-tech.github.io/Ciak/</a></p>
+    <h3>Copyright e licenza</h3>
+    <p>© 2026 Alessio Morrone. Tutti i diritti riservati.</p>
+    <p>Questo software è proprietario. Il codice non può essere copiato, modificato, distribuito, venduto o riutilizzato senza autorizzazione scritta dell'autore. Per richieste di utilizzo o collaborazione: <a href="mailto:ciakstoryboard.info@gmail.com">ciakstoryboard.info@gmail.com</a>.</p>
+    <button type="button" class="btn primary cpok" id="cpOk">Ho capito</button>
+  </div>
+</div>
+<script>
+(function(){
+var n=document.getElementById('cpNotice'),b=document.getElementById('cpOk'),K='ciak_copyright_ok';
+if(!n||!b)return;
+var seen=false;try{seen=localStorage.getItem(K)==='1'}catch(e){}
+if(seen)return;
+n.hidden=false;b.focus();
+b.addEventListener('click',function(){n.hidden=true;try{localStorage.setItem(K,'1')}catch(e){}});
+})();
+</script>
+</body></html>
