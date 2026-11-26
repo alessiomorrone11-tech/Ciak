@@ -799,6 +799,7 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
           <label class="pplbl" for="ppProj">Progetto</label><select id="ppProj"></select>
           <div class="tabs" role="tablist" style="display:inline-flex"><button role="tab" id="ppTabMb" aria-selected="true">Mood board</button><button role="tab" id="ppTabCh" aria-selected="false">Schede personaggio</button></div>
         </div>
+        <div class="ppact" id="ppTools"><button type="button" class="btn" id="ppPdf" title="PDF della pagina aperta, in A4 verticale">PDF</button><button type="button" class="btn" id="ppPrint" title="Stampa la pagina aperta in A4 verticale">Stampa</button><button type="button" class="btn" id="ppExp" title="Salva mood board e schede di questo progetto in un file, per spostarle o fare una copia">Esporta</button><button type="button" class="btn" id="ppImp" title="Aggiungi il contenuto di un file esportato">Importa</button><input type="file" id="ppImpFile" accept=".json,application/json" hidden></div>
         <div id="ppEmpty" class="noproj" hidden>Nessun progetto storyboard in questo browser: mood board e schede personaggio si compilano per ogni progetto.</div>
         <div id="ppMood">
           <p class="hint" style="margin:0 0 12px">Raccogli immagini di riferimento, una tavolozza di colori e appunti sullo stile visivo del progetto.</p>
@@ -15346,6 +15347,29 @@ b.addEventListener('click',function(){n.hidden=true;try{localStorage.setItem(K,'
 .ppch .pphoto img{width:100%;height:100%;object-fit:cover;display:block}
 .ppch label{font-size:11px;font-family:var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;flex-direction:column;gap:3px}
 .ppch .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#ppPrintBox{display:none}
+@media print{
+  body.pr-pp>*:not(#ppPrintBox){display:none!important}
+  body.pr-pp #ppPrintBox{display:block}
+  body.pr-pp{background:#fff!important}
+  #ppPrintBox{color:#000;background:#fff;font-family:Arial,Helvetica,sans-serif;font-size:11pt;line-height:1.35}
+  #ppPrintBox h1{font-size:20pt;margin:0 0 2mm;letter-spacing:.08em;text-transform:uppercase}
+  #ppPrintBox h2{font-size:12pt;margin:6mm 0 2mm;text-transform:uppercase;letter-spacing:.06em}
+  #ppPrintBox .sub{color:#555;margin:0 0 6mm}
+  #ppPrintBox .g{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
+  #ppPrintBox .g figure{margin:0;break-inside:avoid}
+  #ppPrintBox .g img{width:100%;aspect-ratio:4/3;object-fit:contain;border:1px solid #ccc;display:block}
+  #ppPrintBox figcaption{font-size:9pt;color:#333;margin-top:1mm}
+  #ppPrintBox .sw{display:flex;flex-wrap:wrap;gap:3mm}
+  #ppPrintBox .sw span{width:22mm;height:16mm;border:1px solid #999;font:8pt monospace;display:flex;align-items:flex-end;justify-content:center;color:#fff;text-shadow:0 0 2px #000}
+  #ppPrintBox .note{white-space:pre-wrap}
+  #ppPrintBox .c{display:flex;gap:5mm;border:1px solid #bbb;padding:4mm;margin:0 0 4mm;break-inside:avoid}
+  #ppPrintBox .c img{width:55mm;height:41mm;object-fit:contain;border:1px solid #ddd;flex:none}
+  #ppPrintBox .c h3{margin:0 0 1mm;font-size:14pt}
+  #ppPrintBox .c .m{color:#555;margin:0 0 2mm}
+  #ppPrintBox .c b{font-size:8pt;text-transform:uppercase;letter-spacing:.06em;color:#555;display:block}
+  #ppPrintBox .c p{margin:0 0 2mm;white-space:pre-wrap}
+}
 </style>
 <script>
 /* Produzione › Pre-produzione: mood board e schede personaggio (dati in una chiave a parte per ogni progetto) */
@@ -15437,11 +15461,16 @@ Q('#mbFile').addEventListener('change',function(){
   var room=MAXIMG-D.mood.imgs.length;
   if(room<=0){toast('Massimo '+MAXIMG+' immagini per progetto');inp.value='';return}
   if(fs.length>room){toast('Aggiungo solo le prime '+room+' immagini (massimo '+MAXIMG+')');fs=fs.slice(0,room)}
-  var left=fs.length,id=cur;
-  fs.forEach(function(f){shrink(f,900,function(d){
-    if(d&&id===cur&&D)D.mood.imgs.push({id:uid(),src:d,cap:''});
-    else if(!d)toast('Impossibile leggere un file immagine');
-    if(--left===0&&id===cur&&D){if(!saveNow())D.mood.imgs.length=Math.max(0,D.mood.imgs.length-fs.length);drawMb()}
+  var left=fs.length,id=cur,got=new Array(fs.length);
+  fs.forEach(function(f,k){shrink(f,900,function(d){
+    got[k]=d;
+    if(!d)toast('Impossibile leggere un file immagine');
+    if(--left===0&&id===cur&&D){
+      var n0=D.mood.imgs.length;
+      got.forEach(function(x){if(x)D.mood.imgs.push({id:uid(),src:x,cap:''})});
+      if(!saveNow())D.mood.imgs.length=n0;
+      drawMb();
+    }
   })});
   inp.value='';
 });
@@ -15499,6 +15528,173 @@ function pane(pp){
 tEd.addEventListener('click',function(){pane(false)});
 tPp.addEventListener('click',function(){pane(true)});
 ['#hubTSb','#hubTSw','#hubTPr'].forEach(function(s){var e=Q(s);if(e)e.addEventListener('click',function(){saveNow();if(s==='#hubTPr'&&!pPp.hidden)fillProjects()})});
+/* ---- PDF, stampa, esporta, importa ---- */
+var JSPDF='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+function lib(){return new Promise(function(res,rej){if(window.jspdf)return res();var e=document.createElement('script');e.src=JSPDF;e.onload=function(){window.jspdf?res():rej()};e.onerror=rej;document.head.appendChild(e)})}
+function pname(){var o=sel.options[sel.selectedIndex];return (o&&o.textContent)||'Senza titolo'}
+function fbase(){return (pname().replace(/[\\\/:*?"<>|]+/g,'').trim().replace(/\s+/g,'_')||'Progetto')}
+function dl(name,blob,msg){
+  var c;try{c=window.claude&&window.claude.use?Promise.resolve(window.claude.use('downloads')).catch(function(){return null}):Promise.resolve(null)}catch(e){c=Promise.resolve(null)}
+  return c.then(function(d){
+    if(!d){
+      try{var u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download=name;document.body.appendChild(l);l.click();document.body.removeChild(l);setTimeout(function(){URL.revokeObjectURL(u)},4000);toast(msg)}
+      catch(e){toast('Il download non è disponibile in questa vista')}
+      return;
+    }
+    return d.save({filename:name,data:blob}).then(function(){toast(msg)},function(e){if(!e||e.code!=='declined')toast('Salvataggio non riuscito')});
+  });
+}
+function isCh(){return tCh.getAttribute('aria-selected')==='true'}
+function hasData(){return D&&(isCh()?D.chars.length:(D.mood.imgs.length||D.mood.cols.length||D.mood.note))}
+function pdfTxt(t){
+  return String(t==null?'':t).replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/[–—]/g,'-').replace(/…/g,'...').replace(/[^\x09\x0a\x0d\x20-\xff]/g,'');
+}
+function hexRgb(x){var m=/^#?([0-9a-f]{6})$/i.exec(x||'');if(!m)return [128,128,128];var n=parseInt(m[1],16);return [n>>16&255,n>>8&255,n&255]}
+function imgDims(src){return new Promise(function(res){var im=new Image();im.onload=function(){res({w:im.naturalWidth||4,h:im.naturalHeight||3})};im.onerror=function(){res({w:4,h:3})};im.src=src})}
+function fit(d,bw,bh){var r=Math.min(bw/d.w,bh/d.h);return {w:d.w*r,h:d.h*r}}
+function buildPdf(){
+  var ch=isCh(),title=pname(),T=window.jspdf.jsPDF,doc=new T({unit:'mm',format:'a4',orientation:'portrait'});
+  var M=14,W=210-2*M,B=283,y=M;
+  function head(){
+    doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text(ch?'SCHEDE PERSONAGGIO':'MOOD BOARD',M,y+6);
+    doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(90);doc.text(pdfTxt(title),M,y+12);doc.setTextColor(0);
+    y+=20;
+  }
+  function room(n){if(y+n>B){doc.addPage();y=M;return true}return false}
+  head();
+  if(!ch){
+    var imgs=D.mood.imgs,cols=3,gap=5,cw=(W-gap*(cols-1))/cols,chh=cw*0.75,rowH=chh+9;
+    return Promise.all(imgs.map(function(it){return imgDims(it.src)})).then(function(ds){
+      imgs.forEach(function(it,i){
+        var c=i%cols;if(c===0&&i>0)y+=rowH;
+        if(c===0&&y+rowH>B){doc.addPage();y=M}
+        var x=M+c*(cw+gap),f=fit(ds[i],cw,chh);
+        doc.setDrawColor(200);doc.rect(x,y,cw,chh);
+        try{doc.addImage(it.src,'JPEG',x+(cw-f.w)/2,y+(chh-f.h)/2,f.w,f.h)}catch(e){}
+        if(it.cap){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(60);doc.text(doc.splitTextToSize(pdfTxt(it.cap),cw).slice(0,2),x,y+chh+4);doc.setTextColor(0)}
+      });
+      if(imgs.length)y+=rowH;
+      if(D.mood.cols.length){
+        room(34);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('TAVOLOZZA',M,y+4);y+=8;
+        var sw=22,per=Math.floor((W+3)/(sw+3)),x0=M;
+        D.mood.cols.forEach(function(col,i){
+          if(i%per===0&&i>0)y+=sw+7;
+          if(i%per===0&&y+sw+6>B){doc.addPage();y=M}
+          var x=M+(i%per)*(sw+3),r=hexRgb(col);
+          doc.setFillColor(r[0],r[1],r[2]);doc.setDrawColor(150);doc.rect(x,y,sw,sw-6,'FD');
+          doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(60);doc.text(col.toUpperCase(),x+sw/2,y+sw-2,{align:'center'});doc.setTextColor(0);
+        });
+        y+=sw+7;
+      }
+      if(D.mood.note){
+        room(20);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('APPUNTI DI STILE',M,y+4);y+=8;
+        doc.setFont('helvetica','normal');doc.setFontSize(10);
+        doc.splitTextToSize(pdfTxt(D.mood.note),W).forEach(function(l){room(5);doc.text(l,M,y+3.5);y+=5});
+      }
+      return doc.output('blob');
+    });
+  }
+  var chars=D.chars;
+  return Promise.all(chars.map(function(c){return c.img?imgDims(c.img):Promise.resolve(null)})).then(function(ds){
+    var pw=55,ph=41,tx=M+pw+10,tw=W-pw-10-4;
+    chars.forEach(function(c,i){
+      var blocks=[];
+      [['look','Aspetto fisico'],['traits','Carattere'],['costume','Costume e trucco'],['notes','Note']].forEach(function(f){
+        if(c[f[0]])blocks.push([f[1],doc.splitTextToSize(pdfTxt(c[f[0]]),tw)]);
+      });
+      doc.setFontSize(9.5);
+      var th=14;blocks.forEach(function(b){th+=4+b[1].length*4.4+2});
+      var h=Math.max(ph,th)+8;
+      if(h>B-M)h=B-M;
+      room(h+4);
+      doc.setDrawColor(180);doc.rect(M,y,W,h);
+      doc.setDrawColor(215);doc.rect(M+4,y+4,pw,ph);
+      if(c.img&&ds[i]){var f=fit(ds[i],pw,ph);try{doc.addImage(c.img,'JPEG',M+4+(pw-f.w)/2,y+4+(ph-f.h)/2,f.w,f.h)}catch(e){}}
+      var ty=y+9;
+      doc.setFont('helvetica','bold');doc.setFontSize(14);doc.text(pdfTxt(c.name||'Senza nome'),tx,ty);
+      var meta=[c.role,c.age?c.age+' anni':''].filter(Boolean).join(' · ');
+      if(meta){doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(90);doc.text(pdfTxt(meta),tx,ty+5);doc.setTextColor(0)}
+      ty+=12;
+      blocks.forEach(function(b){
+        doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(90);doc.text(b[0].toUpperCase(),tx,ty);doc.setTextColor(0);ty+=4;
+        doc.setFont('helvetica','normal');doc.setFontSize(9.5);b[1].forEach(function(l){doc.text(l,tx,ty);ty+=4.4});ty+=2;
+      });
+      y+=h+4;
+    });
+    return doc.output('blob');
+  });
+}
+Q('#ppPdf').addEventListener('click',function(){
+  if(!D)return;if(!hasData()){toast('Niente da esportare in questa pagina');return}
+  saveNow();toast('Preparo il PDF…');var nm=fbase()+(isCh()?'_schede_personaggio.pdf':'_mood_board.pdf');
+  lib().then(function(){return buildPdf()},function(){toast('Impossibile caricare lo strumento PDF');return null})
+    .then(function(b){if(b)return dl(nm,b,'PDF salvato')},function(){toast('Creazione del PDF non riuscita')});
+});
+function printHTML(){
+  var ch=isCh(),o='<h1>'+(ch?'Schede personaggio':'Mood board')+'</h1><p class="sub"></p>';
+  var box=document.createElement('div');
+  function add(tag,txt,cls){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+  box.appendChild(add('h1',ch?'Schede personaggio':'Mood board'));box.appendChild(add('p',pname(),'sub'));
+  if(!ch){
+    if(D.mood.imgs.length){var g=add('div',null,'g');D.mood.imgs.forEach(function(it){var f=add('figure');var im=add('img');im.src=it.src;im.alt='';f.appendChild(im);if(it.cap)f.appendChild(add('figcaption',it.cap));g.appendChild(f)});box.appendChild(g)}
+    if(D.mood.cols.length){box.appendChild(add('h2','Tavolozza'));var sw=add('div',null,'sw');D.mood.cols.forEach(function(c){var s=add('span',c.toUpperCase());s.style.background=c;sw.appendChild(s)});box.appendChild(sw)}
+    if(D.mood.note){box.appendChild(add('h2','Appunti di stile'));box.appendChild(add('p',D.mood.note,'note'))}
+  }else{
+    D.chars.forEach(function(c){
+      var w=add('div',null,'c'),im=add('img');if(c.img)im.src=c.img;else im.style.visibility='hidden';im.alt='';w.appendChild(im);
+      var t=add('div');t.appendChild(add('h3',c.name||'Senza nome'));
+      var meta=[c.role,c.age?c.age+' anni':''].filter(Boolean).join(' · ');if(meta)t.appendChild(add('p',meta,'m'));
+      [['look','Aspetto fisico'],['traits','Carattere'],['costume','Costume e trucco'],['notes','Note']].forEach(function(f){if(c[f[0]]){t.appendChild(add('b',f[1]));t.appendChild(add('p',c[f[0]]))}});
+      w.appendChild(t);box.appendChild(w);
+    });
+  }
+  return box;
+}
+Q('#ppPrint').addEventListener('click',function(){
+  if(!D)return;if(!hasData()){toast('Niente da stampare in questa pagina');return}
+  saveNow();
+  var pb=document.createElement('div');pb.id='ppPrintBox';pb.appendChild(printHTML());document.body.appendChild(pb);
+  var st=document.createElement('style');st.textContent='@page{size:A4 portrait;margin:12mm}';document.head.appendChild(st);
+  document.body.classList.add('pr-pp');
+  function done(){document.body.classList.remove('pr-pp');st.remove();pb.remove();window.removeEventListener('afterprint',done)}
+  window.addEventListener('afterprint',done);
+  window.print();
+});
+Q('#ppExp').addEventListener('click',function(){
+  if(!D)return;saveNow();
+  if(!D.mood.imgs.length&&!D.mood.cols.length&&!D.mood.note&&!D.chars.length){toast('Niente da esportare per questo progetto');return}
+  var o={ciak:'preproduzione',v:1,title:pname(),mood:D.mood,chars:D.chars};
+  dl(fbase()+'_pre-produzione.json',new Blob([JSON.stringify(o)],{type:'application/json'}),'File salvato');
+});
+Q('#ppImp').addEventListener('click',function(){if(D)Q('#ppImpFile').click()});
+Q('#ppImpFile').addEventListener('change',function(){
+  var f=this.files&&this.files[0],inp=this;if(!f||!D){return}
+  var r=new FileReader(),id=cur;
+  r.onload=function(){
+    if(id!==cur||!D){inp.value='';return}
+    var o=null;try{o=JSON.parse(r.result)}catch(e){}
+    if(!o||o.ciak!=='preproduzione'||!o.mood||!Array.isArray(o.chars)){toast('Questo file non è una pre-produzione di Ciak');inp.value='';return}
+    var bak=JSON.stringify(D),ni=0,nc=0,ncol=0;
+    (Array.isArray(o.mood.imgs)?o.mood.imgs:[]).forEach(function(it){
+      if(it&&typeof it.src==='string'&&it.src.indexOf('data:image/')===0&&D.mood.imgs.length<MAXIMG){D.mood.imgs.push({id:uid(),src:it.src,cap:String(it.cap||'').slice(0,80)});ni++}
+    });
+    (Array.isArray(o.mood.cols)?o.mood.cols:[]).forEach(function(c){
+      if(/^#[0-9a-f]{6}$/i.test(c)&&D.mood.cols.indexOf(c)<0&&D.mood.cols.length<24){D.mood.cols.push(c);ncol++}
+    });
+    var n=String(o.mood.note||'');if(n&&D.mood.note.indexOf(n)<0){D.mood.note=D.mood.note?D.mood.note+'\n\n'+n:n}
+    o.chars.forEach(function(c){
+      if(!c||typeof c!=='object')return;
+      var k={id:uid(),img:(typeof c.img==='string'&&c.img.indexOf('data:image/')===0)?c.img:''};
+      ['name','role','age','look','traits','costume','notes'].forEach(function(p){k[p]=String(c[p]||'')});
+      D.chars.push(k);nc++;
+    });
+    if(!saveNow()){D=JSON.parse(bak);saveNow()}
+    else toast('Importati: '+ni+' immagini, '+ncol+' colori, '+nc+' personaggi');
+    inp.value='';sub(isCh()?'ch':'mb');
+  };
+  r.onerror=function(){toast('Impossibile leggere il file');inp.value=''};
+  r.readAsText(f);
+});
 window.addEventListener('pagehide',saveNow);
 document.addEventListener('visibilitychange',function(){if(document.hidden)saveNow()});
 })();
