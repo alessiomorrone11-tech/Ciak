@@ -805,7 +805,7 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
         <div id="ppMood">
           <p class="hint" style="margin:0 0 12px">Lavagna a nodi: crea nodi principali e secondari collegati tra loro, dai un nome a ognuno e aggiungi annotazioni libere. Trascina per spostare, trascina lo sfondo per muoverti, Ctrl + rotella (o pizzico) per lo zoom.</p>
           <div class="ppact"><button type="button" class="btn primary" id="bdAddMain">Nodo principale</button><button type="button" class="btn" id="bdAddSub" title="Crea un nodo secondario collegato al nodo selezionato">Nodo secondario</button><button type="button" class="btn" id="bdAddNote">Annotazione</button><span class="ppsp"></span><button type="button" class="btn" id="bdZo" aria-label="Riduci">−</button><button type="button" class="btn" id="bdZi" aria-label="Ingrandisci">+</button><button type="button" class="btn" id="bdFit">Adatta</button></div>
-          <div class="bd" id="bd"><div class="bdw" id="bdw"><svg class="bdl" id="bdl" aria-hidden="true"></svg></div><div class="bdh" id="bdHint">Lavagna vuota: aggiungi un «Nodo principale» per cominciare.</div></div>
+          <div class="bd" id="bd"><div class="bdw" id="bdw"><svg class="bdl" id="bdl" aria-hidden="true"></svg></div><div class="bdcur-box" id="bdCur"></div><div class="bdh" id="bdHint">Lavagna vuota: aggiungi un «Nodo principale» per cominciare.</div></div>
           <div class="bdi" id="bdIns" hidden>
             <label>Nome<input type="text" id="insName" maxlength="60" placeholder="Nome del nodo"></label>
             <label>Descrizione<textarea id="insText" rows="2" maxlength="300" placeholder="Dettagli, riferimenti…"></textarea></label>
@@ -15350,6 +15350,9 @@ b.addEventListener('click',function(){n.hidden=true;try{localStorage.setItem(K,'
 .bdl{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none}
 .bdl path{fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round}
 .bdh{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--muted);pointer-events:none}
+.bdcur-box{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:5}
+.bdcur{position:absolute;left:0;top:0;display:flex;align-items:flex-start;gap:2px;font-size:11px;line-height:1;transition:transform .35s linear;will-change:transform}
+.bdcur span{margin-top:14px;padding:2px 6px;border-radius:999px;color:#fff;white-space:nowrap}
 .bdn{position:absolute;box-sizing:border-box;overflow:hidden;border-radius:10px;background:var(--surface);color:var(--ink);border:1.5px solid var(--line);display:flex;flex-direction:column;cursor:move;box-shadow:0 1px 3px rgba(0,0,0,.18)}
 .bdn.main{border:2.5px solid var(--accent)}
 .bdn.sel{outline:3px solid var(--accent);outline-offset:2px}
@@ -15409,7 +15412,7 @@ var tEd=Q('#prTabEd'),tPp=Q('#prTabPp'),pEd=Q('#prPaneEd'),pPp=Q('#prPanePp');
 if(!tEd||!tPp||!pEd||!pPp)return;
 var sel=Q('#ppProj'),tMb=Q('#ppTabMb'),tCh=Q('#ppTabCh'),vMb=Q('#ppMood'),vCh=Q('#ppChars'),emp=Q('#ppEmpty');
 var MAXIMG=24,MAXN=200,D=null,cur='',arm=null,armT=null,selId=null;
-var SY={code:'',pid:'',un:null,fs:null,uid:'',name:'',H:{},dirty:{},tomb:{},online:{},state:'local',ro:false,seen:{},chg:{n:{},t:{},c:{}},defer:{},dt:null,first:true,beat:null,rt:null,pt:null,pendR:false,lastSel:null,gen:0};
+var SY={code:'',pid:'',un:null,fs:null,uid:'',name:'',H:{},dirty:{},tomb:{},online:{},state:'local',ro:false,seen:{},chg:{n:{},t:{},c:{}},B:{},cur:null,ct:0,cw:null,dragT:null,first:true,beat:null,rt:null,pt:null,pendR:false,lastSel:null,gen:0};
 function toast(m){var t=Q('#toast');if(!t)return;t.textContent=m;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(function(){t.classList.remove('on')},2200)}
 function uid(){return Math.random().toString(36).slice(2,9)}
 function key(id){return 'ciak-pre-'+id}
@@ -15525,6 +15528,7 @@ function V(){return D.board.view}
 function applyView(){
   var v=V();bw.style.transform='translate('+v.x+'px,'+v.y+'px) scale('+v.z+')';
   bd.style.backgroundSize=(24*v.z)+'px '+(24*v.z)+'px';bd.style.backgroundPosition=v.x+'px '+v.y+'px';
+  if(typeof paintCursors==='function')paintCursors();
 }
 /* punti di una curva dal bordo del padre al bordo del figlio */
 function linkPts(p,c){
@@ -15645,8 +15649,7 @@ function insRefresh(force){
   var n=selId&&nodeById(selId),box=Q('#bdIns');
   if(!n){box.hidden=true;Q('#bdAddSub').title='Crea un nodo secondario collegato al nodo selezionato';return}
   box.hidden=false;
-  var nm=Q('#insName');if(force||document.activeElement!==nm)nm.value=n.name;
-  var tx=Q('#insText');if(force||document.activeElement!==tx)tx.value=n.text;
+  setVal(Q('#insName'),n.name);setVal(Q('#insText'),n.text);
   Q('#insType').value=n.t;
   var ps=Q('#insPar'),ds=descendants(n.id);ps.innerHTML='';
   ps.appendChild(h('option',{value:'',text:'— nessuno —'}));
@@ -15719,7 +15722,7 @@ bd.addEventListener('pointermove',function(ev){
   if(!drag.moved&&Math.abs(dx)+Math.abs(dy)<4)return;
   drag.moved=true;
   if(drag.k==='pan'){var v=V();v.x=drag.ox+dx;v.y=drag.oy+dy;applyView()}
-  else{var z=V().z;drag.o.x=Math.round(drag.ox+dx/z);drag.o.y=Math.round(drag.oy+dy/z);drag.el.style.left=drag.o.x+'px';drag.el.style.top=drag.o.y+'px';if(drag.k==='node')drawLinks()}
+  else{var z=V().z;drag.o.x=Math.round(drag.ox+dx/z);drag.o.y=Math.round(drag.oy+dy/z);drag.el.style.left=drag.o.x+'px';drag.el.style.top=drag.o.y+'px';if(drag.k==='node')drawLinks();if(!SY.dragT&&SY.un){SY.dragT=setTimeout(function(){SY.dragT=null;if(drag&&drag.moved)saveNow()},450)}}
 });
 function endPtr(ev){
   delete ptr[ev.pointerId];
@@ -15741,6 +15744,7 @@ function charCard(c0){
   function cur(){return lookup('c',id)||c0}
   var c=c0;
   var ph=h('button',{type:'button','class':'pphoto','aria-label':'Scegli la foto del personaggio'},[]);
+  ph.setAttribute('data-i',c.img?hsh(c.img):'');
   if(c.img)ph.appendChild(h('img',{src:c.img,alt:c.name||'Personaggio'}));else ph.textContent='Aggiungi foto';
   var fi=h('input',{type:'file',accept:'image/*',hidden:''});
   ph.addEventListener('click',function(){fi.click()});
@@ -15772,17 +15776,20 @@ function drawCh(){
   if(!D.chars.length){L.appendChild(h('p',{'class':'noproj',text:'Nessun personaggio: aggiungine uno con «Nuovo personaggio».'}));return}
   D.chars.forEach(function(c){L.appendChild(charCard(c))});
 }
-/* aggiornamento dal cloud senza ridisegnare tutto: le schede su cui sto scrivendo non si toccano */
-function patchChars(ch,force){
-  var L=Q('#chList'),redo=false;
+/* aggiornamento dal cloud: le schede già a video si aggiornano campo per campo, così non si perde il cursore di chi sta scrivendo */
+function updateCard(el,c){
+  var f=el.querySelectorAll('input[type=text],textarea');
+  CF.forEach(function(d,i){if(f[i])setVal(f[i],c[d[0]]||'')});
+  var ph=el.querySelector('.pphoto'),hi=c.img?hsh(c.img):'';
+  if(ph&&ph.getAttribute('data-i')!==hi){ph.innerHTML='';ph.setAttribute('data-i',hi);if(c.img)ph.appendChild(h('img',{src:c.img,alt:c.name||'Personaggio'}));else ph.textContent='Aggiungi foto'}
+}
+function patchChars(ch){
+  var L=Q('#chList');
   Object.keys(ch.c).forEach(function(id){
     var el=L.querySelector('.ppch[data-cid="'+id+'"]'),c=lookup('c',id);
     if(!c){if(el)L.removeChild(el);return}
-    var inside=el&&el.contains(document.activeElement);
-    if(inside&&!force){SY.pendR=true;return}
-    var ne=charCard(c);
-    if(el){L.replaceChild(ne,el);return}
-    var idx=D.chars.indexOf(c),next=null,i;
+    if(el){updateCard(el,c);return}
+    var ne=charCard(c),idx=D.chars.indexOf(c),next=null,i;
     for(i=idx+1;i<D.chars.length&&!next;i++)next=L.querySelector('.ppch[data-cid="'+D.chars[i].id+'"]');
     if(next)L.insertBefore(ne,next);else L.appendChild(ne);
   });
@@ -15821,7 +15828,7 @@ function putLocal(k,e){
   for(i=0;i<a.length;i++)if(a[i].id===e.id){a[i]=e;return}
   a.push(e);if(k==='c')a.sort(function(x,y){return (x.o||0)-(y.o||0)});
 }
-function resetH(){SY.H={};SY.dirty={};elems().forEach(function(x){SY.H[ekey(x[0],x[1])]=eh(x[2])})}
+function resetH(){SY.H={};SY.dirty={};SY.B={};elems().forEach(function(x){SY.H[ekey(x[0],x[1])]=eh(x[2])})}
 /* chi ha cambiato cosa dall'ultimo salvataggio: stampa l'ora sugli elementi toccati e li mette in coda per l'invio */
 function stamp(){
   var seen={},now=Date.now();
@@ -15836,11 +15843,11 @@ function pushDirty(){
   SY.dirty={};
   sent.forEach(function(p){
     var kk=p[0],x=p[1],ref=col.doc('_pre.'+kk);
-    if(x.del){var t=Math.max(now,(SY.tomb[kk]||0)+1);SY.tomb[kk]=t;ops.push(function(b){b.set(ref,{d:'',del:true,u:t,rev:t,by:SY.uid,byName:SY.name,pre:1})});return}
+    if(x.del){var t=Math.max(now,(SY.tomb[kk]||0)+1);SY.tomb[kk]=t;delete SY.B[kk];ops.push(function(b){b.set(ref,{d:'',del:true,u:t,rev:t,by:SY.uid,byName:SY.name,pre:1})});return}
     var e=lookup(x.k,x.id);if(!e)return;
     if(!e.u)e.u=now;
     var d=canon(e);if(d.length>900000){toast('Un elemento è troppo grande per la sincronizzazione: alleggerisci l’immagine');return}
-    delete SY.tomb[kk];
+    delete SY.tomb[kk];SY.B[kk]=JSON.parse(d);
     ops.push(function(b){b.set(ref,{d:d,u:e.u,rev:e.u,by:SY.uid,byName:SY.name,pre:1})});
   });
   if(!ops.length)return;
@@ -15865,23 +15872,45 @@ function cleanFor(k,e){
   if(!e||typeof e!=='object'||typeof e.id!=='string')return null;
   return k==='n'?cleanNode(e):k==='t'?cleanNote(e):cleanChar(e,0);
 }
-/* sto modificando proprio questo elemento? allora non lo sovrascrivo (vince ciò che sto scrivendo) */
-function editing(k,id){
-  if(drag&&drag.o&&drag.o.id===id)return true;
-  var a=document.activeElement;if(!a||!pPp.contains(a))return false;
-  if(k==='n')return selId===id&&!!a.closest('#bdIns');
-  if(k==='t'){var n=a.closest('.bdnote');return !!n&&n.getAttribute('data-nid')===id}
-  var c=a.closest('[data-cid]');return !!c&&c.getAttribute('data-cid')===id;
+/* unione di testi: se tu e un collega avete scritto in punti diversi dello stesso campo, restano entrambe le modifiche */
+function m3(b,l,r,rNewer){
+  if(l===r)return l;if(l===b)return r;if(r===b)return l;
+  function df(a,x){var p=0,n=Math.min(a.length,x.length),s=0;while(p<n&&a.charAt(p)===x.charAt(p))p++;while(s<n-p&&a.charAt(a.length-1-s)===x.charAt(x.length-1-s))s++;return {p:p,e:a.length-s,ins:x.slice(p,x.length-s)}}
+  var dl=df(b,l),dr=df(b,r);
+  if(dl.e<=dr.p)return b.slice(0,dl.p)+dl.ins+b.slice(dl.e,dr.p)+dr.ins+b.slice(dr.e);
+  if(dr.e<=dl.p)return b.slice(0,dr.p)+dr.ins+b.slice(dr.e,dl.p)+dl.ins+b.slice(dl.e);
+  return rNewer?r:l;                         /* stesso punto: vince la più recente */
 }
+/* unione campo per campo: i testi si fondono, gli altri valori (posizione, colore…) vince la modifica più recente */
+function mergeEl(base,l,r){
+  var o={},k,rNewer=(r.u||0)>=(l.u||0);
+  for(k in l)o[k]=l[k];for(k in r)if(!(k in o))o[k]=r[k];
+  for(k in o){
+    if(k==='u')continue;
+    var bv=base[k],lv=l[k],rv=r[k];
+    if(lv===rv)o[k]=lv;
+    else if(lv===bv)o[k]=rv;
+    else if(rv===bv)o[k]=lv;
+    else if(typeof lv==='string'&&typeof rv==='string'&&typeof bv==='string'&&k!=='img'&&k!=='parent'&&k!=='color'&&k!=='t')o[k]=m3(bv,lv,rv,rNewer);
+    else o[k]=rNewer?rv:lv;
+  }
+  o.u=Math.max(l.u||0,r.u||0);
+  return o;
+}
+function cp(o){return JSON.parse(JSON.stringify(o))}
+function dragging(id){return !!(drag&&drag.o&&drag.o.id===id)}
 function onSnap(q,gen){
   if(gen!==SY.gen||!D)return;
-  var ch=false,first=SY.first,seen={},forceR=false;
+  var ch=false,first=SY.first,seen={},pres=false;
+  function take(k,e,kk){putLocal(k,e);SY.H[kk]=eh(e);SY.B[kk]=cp(e);ch=true;chgNote(k,e.id)}
   q.docChanges().forEach(function(c){
     var did=c.doc.id,p=did.split('.');if(p[0]!=='_pre')return;
     var k=p[1],eid=p.slice(2).join('.');
     if(k==='p'){
+      pres=true;
       if(c.type==='removed'){delete SY.online[eid];return}
-      var pd=parseDoc(c.doc.data());if(pd&&eid!==SY.uid)SY.online[eid]={n:String(pd.n||'Collaboratore'),s:String(pd.s||''),t:+pd.t||0};
+      var pd=parseDoc(c.doc.data());
+      if(pd&&eid!==SY.uid)SY.online[eid]={n:String(pd.n||'Collaboratore'),s:String(pd.s||''),t:+pd.t||0,cx:pd.cx==null?null:+pd.cx,cy:pd.cy==null?null:+pd.cy,ct:+pd.ct||0};
       return;
     }
     if(k!=='n'&&k!=='t'&&k!=='c')return;
@@ -15893,48 +15922,46 @@ function onSnap(q,gen){
     }
     if(x.del){
       SY.tomb[kk]=Math.max(SY.tomb[kk]||0,+x.u||0);
-      if(l&&(+x.u||0)>=(l.u||0)){removeLocal(k,eid);delete SY.H[kk];ch=true;chgNote(k,eid);if(selId===eid)selId=null}
+      if(l&&(+x.u||0)>=(l.u||0)){removeLocal(k,eid);delete SY.H[kk];delete SY.B[kk];ch=true;chgNote(k,eid);if(selId===eid)selId=null}
       else if(l&&(l.u||0)>(+x.u||0))SY.dirty[kk]={k:k,id:eid};
       return;
     }
     var e=cleanFor(k,parseDoc(x));if(!e||e.id!==eid)return;
     delete SY.tomb[kk];
-    if(l&&eh(l)===eh(e)){SY.H[kk]=eh(e);if((e.u||0)>(l.u||0))l.u=e.u;return}
-    if(!l||(e.u||0)>(l.u||0)){
-      if(l&&editing(k,eid)){
-        if(busy(l,eid)){SY.defer[kk]={k:k,e:e};clearTimeout(SY.dt);SY.dt=setTimeout(flushDefer,1800);return}   /* sto scrivendo adesso: la modifica del collega aspetta; se è ancora la più recente la applico appena smetto */
-        forceR=true;
-      }
-      if(!l&&total()>=MAXN*2)return;
-      putLocal(k,e);SY.H[kk]=eh(e);ch=true;chgNote(k,eid);
-    }else if((l.u||0)>(e.u||0)){SY.dirty[kk]={k:k,id:eid}}   /* la mia è più recente: la rimando */
+    if(!l){if(total()<MAXN*2)take(k,e,kk);return}
+    if(eh(l)===eh(e)){SY.H[kk]=eh(e);SY.B[kk]=cp(e);if((e.u||0)>(l.u||0))l.u=e.u;return}
+    if(dragging(eid)){SY.B[kk]=cp(e);return}                       /* lo sto trascinando io: vale la mia posizione */
+    var base=SY.B[kk];
+    if(!base){                                                /* primo incontro: vince la modifica più recente */
+      if((e.u||0)>(l.u||0))take(k,e,kk);
+      else if((l.u||0)>(e.u||0)){SY.B[kk]=cp(e);SY.dirty[kk]={k:k,id:eid}}
+      return;
+    }
+    if(eh(base)===eh(l)){take(k,e,kk);return}                  /* io non avevo toccato nulla: prendo la loro versione */
+    var mg=cleanFor(k,mergeEl(base,l,e));                      /* abbiamo modificato entrambi: unisco */
+    SY.B[kk]=cp(e);
+    if(eh(mg)===eh(e)){mg.u=e.u}else{mg.u=Date.now();SY.dirty[kk]={k:k,id:eid}}
+    putLocal(k,mg);SY.H[kk]=eh(mg);ch=true;chgNote(k,eid);
   });
   if(first){
     SY.first=false;
     elems().forEach(function(x){var kk=ekey(x[0],x[1]);if(!seen[kk]&&!SY.tomb[kk]){if(!x[2].u)x[2].u=Date.now();SY.dirty[kk]={k:x[0],id:x[1]}}});
     SY.state='live';
   }
-  if(ch){lsWrite();SY.dforce=forceR;remoteRender(forceR);SY.dforce=false}
+  if(ch){lsWrite();remoteRender()}
   pushDirty();
-  paintLive();
+  paintLive();paintCursors();
 }
-function busy(l,id){return !!(drag&&drag.o&&drag.o.id===id)||Date.now()-(l.u||0)<1500}
-function flushDefer(){
-  clearTimeout(SY.dt);var ks=Object.keys(SY.defer);if(!ks.length||!D)return;
-  var did=false,pend=false;
-  ks.forEach(function(kk){
-    var x=SY.defer[kk],l=lookup(x.k,x.e.id);
-    if(l&&editing(x.k,x.e.id)&&busy(l,x.e.id)){pend=true;return}
-    delete SY.defer[kk];
-    if(!l||eh(l)===eh(x.e)||(x.e.u||0)<=(l.u||0))return;       /* nel frattempo ho scritto di più io: vince la mia */
-    putLocal(x.k,x.e);SY.H[kk]=eh(x.e);chgNote(x.k,x.e.id);did=true;
-  });
-  if(pend){SY.dt=setTimeout(flushDefer,1800);return}
-  if(did){lsWrite();SY.dforce=true;remoteRender(true);SY.dforce=false}
-}
-function charFocus(){var a=document.activeElement;return !!(a&&a.closest&&a.closest('#chList')&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))}
 /* cosa è cambiato dal cloud dall'ultimo ridisegno: {n:{id},t:{id},c:{id}} */
 function chgNote(k,id){SY.chg[k][id]=1}
+/* scrive un valore in un campo senza far saltare il cursore di chi sta scrivendo */
+function setVal(el,v){
+  if(!el||el.value===v)return;
+  if(el===document.activeElement){
+    var end=el.value.length-(el.selectionEnd==null?el.value.length:el.selectionEnd);
+    el.value=v;var pos=Math.max(0,v.length-end);try{el.setSelectionRange(pos,pos)}catch(e){}
+  }else el.value=v;
+}
 function patchBoard(ch){
   Object.keys(ch.n).forEach(function(id){
     var el=bw.querySelector('.bdn[data-id="'+id+'"]'),n=nodeById(id);
@@ -15946,25 +15973,19 @@ function patchBoard(ch){
     if(!n){if(el){if(ro)try{ro.unobserve(el)}catch(e){}el.parentNode.removeChild(el)}return}
     if(el){
       el.style.left=n.x+'px';el.style.top=n.y+'px';el.style.width=n.w+'px';el.style.height=n.h+'px';
-      var ta=el.querySelector('textarea');if(ta&&(SY.dforce||document.activeElement!==ta))ta.value=n.text||'';
+      setVal(el.querySelector('textarea'),n.text||'');
     }else{var e2=noteEl(n);bw.appendChild(e2);if(ro)try{ro.observe(e2)}catch(e){}}
   });
   drawLinks();
   Q('#bdHint').style.display=(D.board.nodes.length||D.board.notes.length)?'none':'flex';
-  insRefresh(true);paintPres();
+  insRefresh();paintPres();
 }
-function remoteRender(force){
+function remoteRender(){
   if(!D||pPp.hidden)return;
   if(selId&&!nodeById(selId)&&!noteById(selId))selId=null;
-  if(isCh()){
-    var cc=SY.chg;SY.chg={n:{},t:{},c:{}};
-    if(SY.pendR&&!Object.keys(cc.c).length){SY.pendR=false;drawCh();return}
-    SY.pendR=false;patchChars(cc,force);return;
-  }
   var ch=SY.chg;SY.chg={n:{},t:{},c:{}};
-  if(!vMb.hidden)patchBoard(ch);
+  if(isCh())patchChars(ch);else if(!vMb.hidden)patchBoard(ch);
 }
-pPp.addEventListener('focusout',function(){setTimeout(function(){if(Object.keys(SY.defer).length)flushDefer();if(SY.pendR)remoteRender()},80)});
 
 function colorOfU(u){var a=0,i;for(i=0;i<u.length;i++)a=(a*31+u.charCodeAt(i))>>>0;return 'hsl('+(a%360)+',62%,45%)'}
 function others(){
@@ -16003,10 +16024,34 @@ function paintPres(){
 }
 function presWrite(){
   if(!SY.un||SY.ro)return;
-  var s=selId||'';SY.lastSel=s;
-  var t=Date.now();
-  pcol().doc('_pre.p.'+SY.uid).set({d:JSON.stringify({n:SY.name||'Collaboratore',s:s,t:t}),by:SY.uid,rev:t,pre:1}).catch(function(){});
+  var s=selId||'',t=Date.now(),cu=SY.cur&&t-SY.ct<5000?SY.cur:null;SY.lastSel=s;
+  var o={n:SY.name||'Collaboratore',s:s,t:t};if(cu){o.cx=Math.round(cu.x);o.cy=Math.round(cu.y);o.ct=SY.ct}
+  pcol().doc('_pre.p.'+SY.uid).set({d:JSON.stringify(o),by:SY.uid,rev:t,pre:1}).catch(function(){});
 }
+/* il mio cursore sulla lavagna, in coordinate della lavagna, al massimo ~1,5 volte al secondo */
+function curMove(ev){
+  if(!D||!SY.un||SY.ro)return;
+  var r=bd.getBoundingClientRect(),v=V();
+  SY.cur={x:(ev.clientX-r.left-v.x)/v.z,y:(ev.clientY-r.top-v.y)/v.z};SY.ct=Date.now();
+  if(!SY.cw)SY.cw=setTimeout(function(){SY.cw=null;presWrite()},650);
+}
+bd.addEventListener('pointermove',curMove);
+bd.addEventListener('pointerleave',function(){if(SY.cur){SY.cur=null;clearTimeout(SY.cw);SY.cw=null;presWrite()}});
+/* i cursori dei colleghi: freccia colorata col nome, spariscono se fermi da più di 5 secondi */
+var CURSVG='<svg width="16" height="20" viewBox="0 0 16 20" aria-hidden="true"><path d="M1 1l13 8-6 1.5L5.5 17z" fill="currentColor" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+function paintCursors(){
+  var box=Q('#bdCur');if(!box)return;
+  var now=Date.now(),v=D?V():null,keep={};
+  if(D&&SY.state==='live')others().forEach(function(m){
+    var o=SY.online[m.u];if(!o||o.cx==null||o.cy==null||now-(o.ct||0)>5000)return;
+    keep[m.u]=1;
+    var el=box.querySelector('[data-u="'+m.u+'"]');
+    if(!el){el=h('div',{'class':'bdcur','data-u':m.u});el.style.color=colorOfU(m.u);el.innerHTML=CURSVG;var sp=h('span',{text:m.n});sp.style.background=colorOfU(m.u);el.appendChild(sp);box.appendChild(el)}
+    el.style.transform='translate('+(o.cx*v.z+v.x)+'px,'+(o.cy*v.z+v.y)+'px)';
+  });
+  Array.prototype.slice.call(box.children).forEach(function(e){if(!keep[e.getAttribute('data-u')])box.removeChild(e)});
+}
+setInterval(function(){if(D&&!pPp.hidden)paintCursors()},1500);
 function presSoon(){if(!SY.un||(selId||'')===SY.lastSel)return;clearTimeout(SY.pt);SY.pt=setTimeout(presWrite,600)}
 function linkCode(pid){try{var L=JSON.parse(localStorage.getItem('ciak-team-links')||'{}')['ciak-project-'+pid];return (L&&L.code)||''}catch(e){return ''}}
 function fsReady(){try{return !!(window.firebase&&window.firebase.apps&&window.firebase.apps.length&&window.firebase.auth().currentUser&&window.firebase.firestore)}catch(e){return false}}
@@ -16019,7 +16064,7 @@ function syncStop(unloading){
     if(unloading&&SY.fs&&SY.uid&&SY.code){try{pcol().doc('_pre.p.'+SY.uid).delete().catch(function(){})}catch(e){}}
   }
   SY.un=null;SY.gen++;clearInterval(SY.beat);clearTimeout(SY.rt);clearTimeout(SY.pt);clearTimeout(SY.wait);
-  SY.online={};SY.first=true;SY.tomb={};SY.state='local';SY.code='';
+  SY.online={};SY.B={};SY.cur=null;SY.first=true;SY.tomb={};SY.state='local';SY.code='';
   pPp.classList.remove('ro');SY.ro=false;
 }
 function syncStart(){
