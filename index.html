@@ -13315,9 +13315,11 @@ function roleNum(M,u){var m=M&&M[u];if(!m||!m.role||m.role===RFREE||EXCL[m.role]
 function prRoleOf(c){var o=(me.pr||{})[c];if(o&&o.role)return {role:o.role,alt:o.role===RFREE?String(o.alt||'').slice(0,30):''};return {role:me.role,alt:myAlt()}}
 function pdSetRole(c,role,alt){me.pr=me.pr||{};me.pr[c]={role:role,alt:role===RFREE?String(alt||'').replace(/\s+/g,' ').trim().slice(0,30):''};jset('ciak-team-me',me)}
 /* ruolo con cui lavoro su un progetto condiviso (codice team): quello della produzione che lo contiene; se è in più produzioni vale il più permissivo */
+/* il progetto è nella produzione se è tra i suoi progetti condivisi, oppure è lo storyboard collegato (pair) a una sceneggiatura condivisa: prima lo storyboard collegato non risultava e valeva il ruolo predefinito (es. «Altro sul set») al posto di quello scelto per la produzione */
+function pdHas(d,tc){var P=(d&&d.projects)||{};if(P[tc])return true;var pc=(teams[tc]||{}).pair;if(pc&&P[pc])return true;return Object.keys(P).some(function(x){return P[x]&&P[x].pair===tc})}
 function roleOfCode(tc){
   var found=null,free=null;
-  Object.keys(prods||{}).forEach(function(c){var d=prods[c];if(!d||d.gone||d.closed||!tc||!(d.projects||{})[tc])return;var r=prRoleOf(c);if(r.role!==RFREE)found=found||r;else free=free||r});
+  Object.keys(prods||{}).forEach(function(c){var d=prods[c];if(!d||d.gone||d.closed||!tc||!pdHas(d,tc))return;var r=prRoleOf(c);if(r.role!==RFREE)found=found||r;else free=free||r});
   return found||free||{role:me.role,alt:myAlt()};
 }
 function roleFreeFor(tc){return roleOfCode(tc).role===RFREE}
