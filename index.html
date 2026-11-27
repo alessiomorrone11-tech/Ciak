@@ -181,6 +181,16 @@ h1,h2,h3{margin:0;font-family:var(--font-display);text-transform:uppercase;lette
 .lay .lname em{font-style:normal;font-family:var(--font-mono);opacity:.7}
 .lay.dim{opacity:.55}
 .chip.off{opacity:.5}
+/* commenti sulla pianta */
+.pnbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
+.pnbar .pnvis{padding:4px 8px}
+.pnbar .chip .nb{width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:600 10px var(--font-body);flex:none}
+.pnbar .chip .ntx{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pnbar .chip.done .ntx{text-decoration:line-through;opacity:.7}
+.pnote{cursor:grab}
+.pnote:active{cursor:grabbing}
+#stage.noteplace,#stage.noteplace *{cursor:crosshair!important}
+.notepanel .f input[type=number]{min-width:0;flex:1}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 10px 3px 8px;display:inline-flex;align-items:center;gap:6px;font-size:12px}
 .chip[aria-pressed="true"]{border-color:var(--accent);background:var(--surface2);font-weight:600}
@@ -697,6 +707,7 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
   <symbol id="i-sdoor" viewBox="0 0 24 24"><path d="M3 21h18M3 4v17M21 4v17M3 4h18M12 4v17"/><path d="M8.5 12h-3M7 10.5 5.5 12 7 13.5"/></symbol>
   <symbol id="i-door" viewBox="0 0 24 24"><path d="M6 21V4h12v17M4 21h16"/><circle cx="15" cy="13" r=".8"/></symbol>
   <symbol id="i-win" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M12 4v16M4 12h16"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M4 5h16v11h-9l-4 4v-4H4z"/></symbol>
   <symbol id="i-room" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1" stroke-dasharray="3 2"/><path d="M3 12h7M14 12h7"/></symbol>
   <symbol id="i-cube" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></symbol>
 </svg>
@@ -878,12 +889,15 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
         <button class="btn" data-add="door"><svg class="ico"><use href="#i-door"/></svg>Porta</button>
         <button class="btn" data-add="win"><svg class="ico"><use href="#i-win"/></svg>Finestra</button>
         <button class="btn" data-add="room" title="Aggiunge una stanza con i suoi muri, accanto alle altre"><svg class="ico"><use href="#i-room"/></svg>Stanza</button>
+        <button class="btn" id="noteAdd" type="button" aria-pressed="false" title="Aggiunge un commento sulla pianta: tocca dove vuoi metterlo. Se tocchi un elemento, il commento resta legato a lui"><svg class="ico"><use href="#i-note"/></svg>Commento</button>
       </div>
       <div class="worldbar"><span class="laylbl">Area</span><input id="worldW" type="number" min="4" max="300" step="1" aria-label="Larghezza dell'area di lavoro in metri"><span>×</span><input id="worldH" type="number" min="4" max="300" step="1" aria-label="Altezza dell'area di lavoro in metri"><span>m</span><button class="btn" id="worldFit" title="Adatta l'area a stanze ed elementi">Adatta</button><span class="laylbl" style="margin-left:8px">Zoom</span><button class="btn" id="zoomOut" aria-label="Riduci" title="Riduci (rotella del mouse)">−</button><button class="btn" id="zoomIn" aria-label="Ingrandisci" title="Ingrandisci (rotella del mouse)">+</button><button class="btn" id="zoomFit" title="Torna alla vista intera">Vista intera</button><button class="btn primary" id="alnBtn" aria-pressed="true" title="Allinea gli arredi tra loro mentre li trascini: bordi e centri si agganciano a quelli degli altri arredi (Alt = senza allineamento)">Allinea arredi</button></div>
       <div class="layers" id="layers"></div>
       <div class="stagebox"><svg id="stage" viewBox="0 0 1200 800" role="img" aria-label="Pianta della scena"></svg></div>
       <div class="chips" id="chips"></div>
+      <div class="pnbar" id="noteBar"></div>
       <p class="hint">Trascina gli elementi per spostarli. Il cerchio sul bordo dell'elemento selezionato ruota la direzione. Il cono azzurro mostra il campo visivo della camera (con la camera a piombo diventa il rettangolo ripreso). I livelli sopra la scena servono a non sovrapporre le cose: l'occhio nasconde un tipo di elemento, il lucchetto lo rende non selezionabile, il nome lo isola (gli altri restano sfumati e non si toccano). I cerchi numerati sono le tappe del percorso: premi una tappa e la camera si sposta lì, come un fotogramma chiave. Trascinala per spostare la tappa, usa il cerchio per ruotarla col mouse: tutto si salva nella tappa. «Partenza» torna alla posizione iniziale. Muri, porte e finestre: «Stanza» crea i quattro muri attorno alla scena; avvicinando una stanza a un'altra si aggancia e i due muri diventano uno solo (tieni Alt per spostarla senza aggancio), «Muro» ne aggiunge uno singolo, porte e finestre si agganciano al muro più vicino e lo bucano; in 3D si vedono con spessore, aperture e anta. Rotella del mouse: zoom; per spostare la vista tieni premuto Spazio (o il tasto centrale o destro) e trascina. Trascina sullo sfondo, o dentro una stanza, per selezionare più elementi con il rettangolo; Maiusc o Ctrl + clic aggiunge un elemento. Ctrl+C / Ctrl+V copiano e incollano la selezione, Ctrl+G la raggruppa.</p>
+      <p class="hint" style="margin-top:6px">Commenti: premi «Commento» e tocca la pianta. Su un elemento il commento resta legato a lui e lo segue; sul vuoto è un punto libero. Dal pannello scegli testo, posizione, colore e a cosa è collegato (un elemento o un'altra inquadratura).</p>
       <p class="hint" style="margin-top:6px">Con il trackpad: scorri con due dita per spostare la vista, pizzica per ingrandire o ridurre. Con il mouse la rotella fa zoom.</p>
     </section>
 
@@ -959,9 +973,9 @@ body.in3d #acBtn,body.in3d #tmFab,body.in3d #thBtn,body.in3d #thPanel{display:no
     <div class="card edhead" id="edHead"></div>
     <div class="card edgir" id="edGir">
       <div class="r1"><p><b>Girato</b> · <span id="edGirInfo">Nessuna cartella collegata</span></p>
-        <div class="grp"><button class="btn" id="edGirPick">Collega la cartella del girato</button><button class="btn" id="edGirUnlink" hidden>Scollega</button><button class="btn" id="edGirCheck" title="Cerca nella cartella i file segnati sul bollettino, senza copiare niente">Controlla file</button><button class="btn primary" id="edGirExtract" title="Copia i file buoni in una nuova cartella «girato - titolo»">Estrai il girato buono</button><button class="btn danger" id="edGirStop" hidden>Interrompi</button></div></div>
+        <div class="grp"><button class="btn" id="edGirPick">Collega la cartella del girato</button><button class="btn" id="edGirUnlink" hidden>Scollega</button><button class="btn" id="edGirCheck" title="Cerca nella cartella i file segnati sul bollettino, senza copiare niente">Controlla file</button><button class="btn primary" id="edGirExtract" title="Copia i file buoni in una nuova cartella «girato - titolo»">Estrai il girato buono</button><button class="btn" id="edGirCut" title="Crea un nuovo progetto in Cut con le riprese «Buona» nella cartella «Buono» e le «Riserva» nella cartella «Riserva»">Esporta su Cut</button><button class="btn danger" id="edGirStop" hidden>Interrompi</button></div></div>
       <div class="edgopt" id="edGirOpt"><label><input type="checkbox" id="edGirScn" checked> dividi in cartelle per scena</label><label><input type="checkbox" id="edGirRes"> includi anche le riserve</label></div>
-      <p class="hint" style="margin:6px 0 0;text-align:left">Scrivi il nome del file nella colonna «File» (più nomi separati da virgola, per esempio video e audio). Senza estensione l'app prende tutti i file con quel nome. Mentre scrivi in «File» compare in grigio il nome successivo (dopo A001_C001 propone A001_C002; con la cartella collegata completa anche con i file che ci sono davvero): Invio o freccia destra lo accetta, Esc lo scarta; «Controlla file» rilegge la cartella. Estrae le riprese segnate «Buona» e crea la cartella «girato - titolo» nella posizione che scegli. Gli originali non vengono toccati.</p>
+      <p class="hint" style="margin:6px 0 0;text-align:left">Scrivi il nome del file nella colonna «File» (più nomi separati da virgola, per esempio video e audio). Senza estensione l'app prende tutti i file con quel nome. Mentre scrivi in «File» compare in grigio il nome successivo (dopo A001_C001 propone A001_C002; con la cartella collegata completa anche con i file che ci sono davvero): Invio o freccia destra lo accetta, Esc lo scarta; «Controlla file» rilegge la cartella. Estrae le riprese segnate «Buona» e crea la cartella «girato - titolo» nella posizione che scegli. Gli originali non vengono toccati. «Esporta su Cut» crea invece un nuovo progetto in Cut (nello stesso browser) con le riprese «Buona» nella cartella «Buono» e le «Riserva» nella cartella «Riserva», sempre comprese; con «dividi in cartelle per scena» ognuna delle due si divide per scena.</p>
       <div id="edGirProg" class="gprog" hidden></div><div id="edGirOut"></div>
     </div>
     <div class="card edwrap" id="edWrap"></div>
@@ -2218,11 +2232,15 @@ function copyScene(src){
   var c=JSON.parse(JSON.stringify(src)),map={};
   c.els.forEach(function(e){var n=uid();map[e.id]=n;e.id=n});
   c.els.forEach(function(e){if(e.rid)e.rid=map[e.rid]||''});
-  return {id:uid(),title:'Piano sequenza',shot:'SEQ',dur:0,action:'',dialogue:'',cam:map[src.cam]||null,els:c.els};
+  var o={id:uid(),title:'Piano sequenza',shot:'SEQ',dur:0,action:'',dialogue:'',cam:map[src.cam]||null,els:c.els};
+  if(Array.isArray(c.notes)&&c.notes.length){c.notes.forEach(function(n){n.id=uid();if(n.el)n.el=map[n.el]||''});o.notes=c.notes}
+  return o;
 }
 function normScene(p){
   p.id=p.id||uid();p.title=p.title||'Piano sequenza';p.shot='SEQ';p.dur=0;p.action='';p.dialogue='';
-  p.els=normEls(p.els);return p;
+  p.els=normEls(p.els);
+  if(Array.isArray(p.notes)&&p.notes.length)p.notes=normNotes(p.notes);else delete p.notes;
+  return p;
 }
 
 function seed(){
@@ -2271,6 +2289,7 @@ function norm(d){
   d.panels.forEach(function(p){
     p.id=p.id||uid();p.title=p.title||'';p.shot=p.shot||'FI';p.dur=+p.dur||0;p.action=p.action||'';p.dialogue=p.dialogue||'';
     p.els=normEls(p.els);
+    if(Array.isArray(p.notes)&&p.notes.length)p.notes=normNotes(p.notes);else delete p.notes;
     if(!p.sl||typeof p.sl!=='object'||Array.isArray(p.sl))delete p.sl;
   });
   d.seq=(d.seq&&Array.isArray(d.seq.els))?normScene(d.seq):normScene(copyScene(d.panels[0]));
@@ -4023,6 +4042,7 @@ function renderStage(){
       }
     }
   }
+  ch.push(notesSvg(cur()));
   ch.push(g);stagePatch(ch);
 }
 /* Vista della pianta: di norma segue l'area di lavoro. Con la rotella diventa una vista scelta da te (stageView).
@@ -4568,6 +4588,7 @@ $('#pAdd').addEventListener('click',function(){var np=newPanel();np.els=copyStru
 $('#pDup').addEventListener('click',function(){
   var src=cur(),c=JSON.parse(JSON.stringify(src)),map={};
   c.id=uid();c.els.forEach(function(e){var n=uid();map[e.id]=n;e.id=n});c.els.forEach(function(e){if(e.rid)e.rid=map[e.rid]||''});c.cam=map[src.cam]||null;
+  if(Array.isArray(c.notes))c.notes.forEach(function(n){n.id=uid();if(n.el)n.el=map[n.el]||''});
   c.title=(src.title||'Inquadratura')+' (copia)';
   S.panels.splice(S.cur+1,0,c);S.cur++;sel=null;refreshAll();commit();
 });
@@ -5019,6 +5040,235 @@ function hlFillMenu(){
 }
 hlSmooth();
 hlFillMenu();
+/* ===================== COMMENTI SULLA PIANTA =====================
+   Un commento è un pallino numerato sulla pianta con il suo testo. Sta in p.notes (una lista per ogni inquadratura e per il piano sequenza):
+   si salva, si annulla e si duplica con l'inquadratura. Non è un elemento della scena, quindi non entra in luci, collisioni, anteprima o vista 3D.
+   DOVE STA: libero (x, y in metri) oppure legato a un elemento (el + scarto dx, dy): lo segue quando lo sposti, con una linea tratteggiata.
+   A COSA È COLLEGATO: nessuno, un elemento di questa inquadratura, oppure un'altra inquadratura (shot: dal pannello ci si salta). */
+var NCOL=['#e8b92c','#e8952c','#d2493c','#3f9b6a','#2f9fd6','#8d6fd6'],NKEY='ciak-notes-vis';
+var noteVis=true;try{noteVis=localStorage.getItem(NKEY)!=='0'}catch(e){}
+var nsel=null,notePlace=false,ndrag=null,nCommitT=null;
+var NI=$('#a-insp');
+function nl(p){return p.notes||[]}
+function normNote(n){
+  var col=/^#[0-9a-f]{6}$/i.test(n.color||'')?String(n.color).toLowerCase():'#e8b92c',el=String(n.el||'');
+  return {id:String(n.id||uid()),text:String(n.text==null?'':n.text).slice(0,2000),x:r1(num(n.x,0)),y:r1(num(n.y,0)),dx:r1(num(n.dx,0)),dy:r1(num(n.dy,0)),el:el,shot:el?'':String(n.shot||''),color:col,done:!!n.done};
+}
+function normNotes(list){return (Array.isArray(list)?list:[]).filter(function(n){return n&&typeof n==='object'}).map(normNote)}
+function noteById(id){var L=nl(cur()),i;for(i=0;i<L.length;i++)if(L[i].id===id)return L[i];return null}
+function noteGet(){return nsel?noteById(nsel):null}
+/* l'elemento a cui è legato; se non esiste più (cancellato) il commento diventa libero e resta dov'era */
+function noteEl(p,n){if(!n.el)return null;var i;for(i=0;i<p.els.length;i++)if(p.els[i].id===n.el)return p.els[i];n.el='';return null}
+function notePos(p,n){var e=noteEl(p,n);if(e){n.x=r1(e.x+n.dx);n.y=r1(e.y+n.dy)}return e}
+function noteShot(n){if(!n.shot)return -1;var i;for(i=0;i<S.panels.length;i++)if(S.panels[i].id===n.shot)return i;n.shot='';return -1}
+function noteSide(e,side){
+  var rx,ry;
+  if(e.type==='room'){rx=e.w/2+0.4;ry=e.d/2+0.4}
+  else{var r=0.8;try{r=Math.max(0.7,reach(e)/M+0.2)}catch(x){}rx=ry=r}
+  return side==='up'?[0,-ry]:side==='down'?[0,ry]:side==='left'?[-rx,0]:[rx,0];
+}
+function noteInk(col){var m=/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(col||'');if(!m)return '#1b2127';return (0.299*parseInt(m[1],16)+0.587*parseInt(m[2],16)+0.114*parseInt(m[3],16))>150?'#1b2127':'#ffffff'}
+function noteWrap(t,max){
+  var out=[];
+  String(t).split('\n').forEach(function(line){
+    var c='';
+    line.split(' ').forEach(function(w){
+      if(w.length>max)w=w.slice(0,max-1)+'…';
+      if(c&&(c+' '+w).length>max){out.push(c);c=w}else c=c?c+' '+w:w;
+    });
+    out.push(c);
+  });
+  return out;
+}
+function notesSvg(p){
+  if(sel&&nsel)nsel=null;
+  var L=nl(p);if(!noteVis||!L.length)return '';
+  var cm=stage.getScreenCTM(),u=(cm&&cm.a>0)?1/cm.a:2.5,V=viewRect(),right=(V.x0+V.w)*M,lines='',pins='',f=function(v){return v.toFixed(1)};
+  L.forEach(function(n,i){
+    var e=notePos(p,n),x=n.x*M,y=n.y*M,on=n.id===nsel,col=n.done?'var(--muted)':n.color,ink=n.done?'var(--surface)':noteInk(n.color),r=11*u;
+    if(e){
+      lines+='<line x1="'+f(e.x*M)+'" y1="'+f(e.y*M)+'" x2="'+f(x)+'" y2="'+f(y)+'" stroke="'+col+'" stroke-width="'+f(1.6*u)+'" stroke-dasharray="'+f(5*u)+' '+f(4*u)+'" pointer-events="none"/>'
+        +'<circle cx="'+f(e.x*M)+'" cy="'+f(e.y*M)+'" r="'+f(3.5*u)+'" fill="'+col+'" pointer-events="none"/>';
+    }
+    var txt=n.text.trim(),si=noteShot(n),tag=si>=0?'→ Inq. '+(si+1)+(txt?' · ':''):'',rows;
+    if(on){rows=noteWrap(tag+txt,34).slice(0,7);if(!tag&&!txt)rows=['(commento vuoto)']}
+    else{var one=(tag+txt).replace(/\s+/g,' ');if(!one)one='(vuoto)';rows=[one.length>30?one.slice(0,29)+'…':one]}
+    var mx=0;rows.forEach(function(q){if(q.length>mx)mx=q.length});
+    var bw=(mx*6.6+14)*u,bh=(rows.length*15+8)*u,off=r+5*u,lx=(x+off+bw>right)?-off-bw:off,tx='';
+    rows.forEach(function(q,j){tx+='<text x="'+f(lx+7*u)+'" y="'+f(-bh/2+4*u+j*15*u+11.5*u)+'" font-size="'+f(12*u)+'" fill="var(--ink)">'+esc(q)+'</text>'});
+    pins+='<g class="pnote" data-note="'+n.id+'" transform="translate('+f(x)+' '+f(y)+')" style="font-family:var(--font-body)"'+(n.done?' opacity=".65"':'')+'>'
+      +(on?'<circle r="'+f(r+5*u)+'" fill="none" stroke="var(--accent)" stroke-width="'+f(2.2*u)+'" stroke-dasharray="'+f(4*u)+' '+f(3*u)+'"/>':'')
+      +'<rect x="'+f(lx)+'" y="'+f(-bh/2)+'" width="'+f(bw)+'" height="'+f(bh)+'" rx="'+f(5*u)+'" fill="var(--surface)" stroke="'+col+'" stroke-width="'+f((on?2:1.2)*u)+'"/>'+tx
+      +'<circle r="'+f(r)+'" fill="'+col+'" stroke="var(--surface)" stroke-width="'+f(2*u)+'"/>'
+      +'<text text-anchor="middle" y="'+f(4.2*u)+'" font-size="'+f(12*u)+'" font-weight="600" fill="'+ink+'">'+(n.done?'✓':(i+1))+'</text></g>';
+  });
+  return lines+pins;
+}
+function noteLinkOpts(p,n){
+  var o='<option value="">Nessuno: punto libero sulla pianta</option>',seen={},g1='',g2='';
+  p.els.forEach(function(x){
+    if(x.type==='wall'&&x.rid)return;
+    if(isArr(x)){if(seen[x.gid])return;seen[x.gid]=1}
+    g1+='<option value="e:'+x.id+'"'+(n.el===x.id?' selected':'')+'>'+esc(TYPE_NAME[x.type]+' · '+arrName(x,p.els))+'</option>';
+  });
+  S.panels.forEach(function(q,j){if(q.id===p.id)return;g2+='<option value="s:'+q.id+'"'+(n.shot===q.id?' selected':'')+'>'+esc('Inquadratura '+(j+1)+(q.title?' · '+q.title:''))+'</option>'});
+  if(g1)o+='<optgroup label="Elementi di questa inquadratura">'+g1+'</optgroup>';
+  if(g2)o+='<optgroup label="Altre inquadrature">'+g2+'</optgroup>';
+  return o;
+}
+function notePanel(n){
+  var p=cur(),L=nl(p),i=L.indexOf(n),e=noteEl(p,n),si=noteShot(n);
+  var h='<div class="notepanel"><h2>'+icon('note')+' Commento <span class="mono" style="font-size:12px;letter-spacing:0;text-transform:none">n. '+(i+1)+'</span></h2>';
+  h+=frow('Testo','<textarea data-nk="text" rows="4" placeholder="Scrivi il commento…">'+esc(n.text)+'</textarea>');
+  h+=frow('Collegato a','<select data-nk="link">'+noteLinkOpts(p,n)+'</select>');
+  if(e){
+    h+=frow('Dove sta','<div class="seg">'+[['up','Sopra'],['right','A destra'],['down','Sotto'],['left','A sinistra']].map(function(s2){return '<button type="button" data-npos="'+s2[0]+'">'+s2[1]+'</button>'}).join('')+'</div>');
+    h+=frow('Scarto (m)','<div style="display:flex;gap:6px"><input type="number" data-nk="dx" step="0.05" value="'+n.dx+'" aria-label="Scarto orizzontale in metri"><input type="number" data-nk="dy" step="0.05" value="'+n.dy+'" aria-label="Scarto verticale in metri"></div>');
+  }else{
+    h+=frow('Posizione (m)','<div style="display:flex;gap:6px"><input type="number" data-nk="x" step="0.05" value="'+n.x+'" aria-label="Posizione orizzontale in metri"><input type="number" data-nk="y" step="0.05" value="'+n.y+'" aria-label="Posizione verticale in metri"></div>');
+  }
+  h+=frow('Colore','<div class="seg">'+NCOL.map(function(c){return '<button type="button" data-ncol="'+c+'" aria-pressed="'+(n.color===c)+'" aria-label="Colore" style="width:26px;height:26px;padding:0;background:'+c+';border-color:'+(n.color===c?'var(--ink)':'var(--line)')+(n.color===c?';box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink)':'')+'"></button>'}).join('')+'</div>');
+  h+=frow('Stato','<div class="seg"><button type="button" data-ndone="0" aria-pressed="'+(!n.done)+'">Aperto</button><button type="button" data-ndone="1" aria-pressed="'+(!!n.done)+'">Risolto</button></div>');
+  h+='<div class="inspact">'+(e?'<button class="btn" type="button" data-nact="selel">Seleziona l\'elemento</button>':'')+(si>=0?'<button class="btn" type="button" data-nact="goshot">Vai all\'inquadratura '+(si+1)+'</button>':'')+'<button class="btn danger" type="button" data-nact="del">Elimina commento</button></div>';
+  h+='<p class="hint">Trascina il pallino sulla pianta per spostarlo. Se è legato a un elemento, lo segue quando lo sposti.</p></div>';
+  return h;
+}
+function renderNoteBar(){
+  var b=$('#noteBar');if(!b||!S)return;
+  var p=cur(),L=nl(p),h='<span class="laylbl">Commenti</span>';
+  h+='<button type="button" class="btn pnvis" id="noteVisBtn" aria-pressed="'+(!noteVis)+'" aria-label="'+(noteVis?'Nascondi':'Mostra')+' i commenti sulla pianta" title="'+(noteVis?'Nascondi':'Mostra')+' i commenti sulla pianta">'+icon(noteVis?'eye':'eyeoff')+'</button>';
+  if(!L.length)h+='<span class="empty">Nessuno: premi «Commento» e tocca la pianta dove vuoi metterlo.</span>';
+  else L.forEach(function(n,i){
+    h+='<button type="button" class="chip'+(n.done?' done':'')+'" data-nchip="'+n.id+'" aria-pressed="'+(n.id===nsel)+'"><span class="nb" style="background:'+(n.done?'var(--muted)':n.color)+';color:'+(n.done?'var(--surface)':noteInk(n.color))+'">'+(n.done?'✓':(i+1))+'</span><span class="ntx">'+esc(n.text.trim()||'(vuoto)')+'</span></button>';
+  });
+  b.innerHTML=h;
+}
+$('#noteBar').addEventListener('click',function(ev){
+  if(ev.target.closest('#noteVisBtn')){noteVis=!noteVis;try{localStorage.setItem(NKEY,noteVis?'1':'0')}catch(e){}renderStage();renderNoteBar();return}
+  var c=ev.target.closest('[data-nchip]');if(!c)return;
+  nsel=nsel===c.dataset.nchip?null:c.dataset.nchip;sel=null;multi=[];
+  if(nsel&&!noteVis){noteVis=true;try{localStorage.setItem(NKEY,'1')}catch(e){}}
+  selRefresh();renderNoteBar();
+});
+function notePlaceSet(on){
+  notePlace=!!on;var b=$('#noteAdd');
+  if(b){b.classList.toggle('primary',notePlace);b.setAttribute('aria-pressed',notePlace?'true':'false')}
+  stage.classList.toggle('noteplace',notePlace);
+  if(notePlace)toast('Tocca la pianta dove vuoi il commento. Su un elemento, resta legato a lui (Esc annulla)');
+}
+$('#noteAdd').addEventListener('click',function(){if(MOB||roView())return;notePlaceSet(!notePlace)});
+function noteCreate(x,y,el){
+  var p=cur(),W=WD();
+  x=clamp(Math.round(x*20)/20,W.x0,W.x1);y=clamp(Math.round(y*20)/20,W.y0,W.y1);
+  var n=normNote({id:uid(),text:'',x:x,y:y});
+  if(el){n.el=el.id;n.dx=r1(x-el.x);n.dy=r1(y-el.y)}
+  if(!p.notes)p.notes=[];
+  p.notes.push(n);
+  nsel=n.id;sel=null;multi=[];
+  if(!noteVis){noteVis=true;try{localStorage.setItem(NKEY,'1')}catch(e){}}
+  refreshAll();commit();
+  var ta=NI.querySelector('[data-nk="text"]');if(ta){try{ta.focus()}catch(e){}}
+}
+function noteDelete(n){
+  var p=cur();p.notes=nl(p).filter(function(x){return x!==n});if(!p.notes.length)delete p.notes;
+  nsel=null;refreshAll();commit();
+}
+function noteLink(n,v){
+  var p=cur(),id=v.slice(2);
+  if(v.charAt(0)==='e'){var e=null;p.els.forEach(function(x){if(x.id===id)e=x});if(!e)return;n.el=e.id;n.shot='';n.dx=r1(n.x-e.x);n.dy=r1(n.y-e.y)}
+  else if(v.charAt(0)==='s'){n.el='';n.shot=id}
+  else{n.el='';n.shot=''}
+}
+function noteIn(t){return !!(t&&t.closest&&t.closest('.notepanel'))}
+function noteCommitSoon(){clearTimeout(nCommitT);nCommitT=setTimeout(commit,600)}
+function noteSyncInputs(n){['x','y','dx','dy'].forEach(function(k){var i=NI.querySelector('[data-nk="'+k+'"]');if(i&&document.activeElement!==i)i.value=n[k]})}
+/* pannello: i gestori stanno in fase di cattura così non toccano quelli degli elementi */
+NI.addEventListener('input',function(ev){
+  var t=ev.target;if(!noteIn(t))return;ev.stopPropagation();
+  var n=noteGet();if(!n)return;
+  var k=t.dataset.nk,v,W=WD();
+  if(k==='text')n.text=t.value.slice(0,2000);
+  else if(k==='x'||k==='y'||k==='dx'||k==='dy'){
+    v=parseFloat(t.value);if(isNaN(v))return;
+    if(k==='x')n.x=r1(clamp(v,W.x0,W.x1));else if(k==='y')n.y=r1(clamp(v,W.y0,W.y1));else n[k]=r1(clamp(v,-60,60));
+  }else return;
+  renderStage();renderNoteBar();saveSoon();noteCommitSoon();
+},true);
+NI.addEventListener('change',function(ev){
+  var t=ev.target;if(!noteIn(t))return;ev.stopPropagation();
+  var n=noteGet();if(!n)return;
+  if(t.dataset.nk==='link'){noteLink(n,t.value);commit();refreshAll();return}
+  clearTimeout(nCommitT);commit();
+},true);
+NI.addEventListener('click',function(ev){
+  if(!noteIn(ev.target))return;
+  var b=ev.target.closest('[data-npos],[data-ncol],[data-ndone],[data-nact]');if(!b)return;
+  ev.stopPropagation();
+  var n=noteGet();if(!n)return;
+  var p=cur(),a=b.dataset.nact;
+  if(b.dataset.npos){var e=noteEl(p,n);if(!e)return;var d=noteSide(e,b.dataset.npos);n.dx=r1(d[0]);n.dy=r1(d[1])}
+  else if(b.dataset.ncol)n.color=b.dataset.ncol;
+  else if(b.hasAttribute('data-ndone'))n.done=b.dataset.ndone==='1';
+  else if(a==='del'){noteDelete(n);return}
+  else if(a==='selel'){
+    var e2=noteEl(p,n);
+    if(e2){var ly=layers[LK(e2.type)];if(ly&&!ly.vis){ly.vis=true;saveLayers();renderLayers()}nsel=null;sel=e2.id;multi=[];refreshAll()}
+    return;
+  }
+  else if(a==='goshot'){
+    var si=noteShot(n);
+    if(si>=0){nsel=null;S.cur=si;if(view!=='scena')setTab('scena');else{sel=null;refreshAll()}}
+    return;
+  }
+  commit();refreshAll();
+},true);
+/* pianta: crea (modalità «Commento»), seleziona e trascina i pallini. Fase di cattura: ha la precedenza sulla selezione degli elementi */
+stage.addEventListener('pointerdown',function(ev){
+  if(MOB||ev.button!==0||spaceDown||Object.keys(tpts).length>1)return;
+  var nt=ev.target.closest&&ev.target.closest('[data-note]');
+  if(notePlace){
+    if(roView()){notePlaceSet(false);return}
+    var pt=toStage(ev),ge=ev.target.closest('[data-id]'),el=ge?getEl(ge.dataset.id):null;
+    notePlaceSet(false);noteCreate(pt.x,pt.y,(el&&el.type!=='room')?el:null);
+    ev.stopPropagation();ev.preventDefault();return;
+  }
+  if(nt){
+    var n=noteById(nt.dataset.note);if(!n)return;
+    var p2=toStage(ev);
+    nsel=n.id;sel=null;multi=[];
+    ndrag={id:n.id,dx:n.x-p2.x,dy:n.y-p2.y,moved:false,cx:ev.clientX,cy:ev.clientY};
+    try{stage.setPointerCapture(ev.pointerId)}catch(e){}
+    ev.stopPropagation();ev.preventDefault();
+    renderStage();renderInspector();renderChips();renderNoteBar();renderPreviewHead();
+    return;
+  }
+  if(nsel){nsel=null;setTimeout(function(){renderStage();renderInspector();renderNoteBar()},0)}
+},true);
+stage.addEventListener('pointermove',function(ev){
+  if(!ndrag)return;
+  var n=noteById(ndrag.id);if(!n){ndrag=null;return}
+  if(!ndrag.moved&&Math.hypot(ev.clientX-ndrag.cx,ev.clientY-ndrag.cy)<4)return;
+  ndrag.moved=true;
+  var pt=toStage(ev),W=WD(),p=cur();
+  n.x=clamp(Math.round((pt.x+ndrag.dx)*20)/20,W.x0,W.x1);n.y=clamp(Math.round((pt.y+ndrag.dy)*20)/20,W.y0,W.y1);
+  var e=noteEl(p,n);if(e){n.dx=r1(n.x-e.x);n.dy=r1(n.y-e.y)}
+  renderStage();noteSyncInputs(n);saveSoon();
+});
+function noteEnd(){
+  if(!ndrag)return;
+  var d=ndrag;ndrag=null;
+  if(d.moved){commit();renderInspector();renderNoteBar()}
+}
+stage.addEventListener('pointerup',noteEnd);
+stage.addEventListener('pointercancel',noteEnd);
+stage.addEventListener('lostpointercapture',noteEnd);
+document.addEventListener('keydown',function(ev){
+  if(ev.key==='Escape'&&notePlace){notePlaceSet(false);return}
+  if(view==='home'||!nsel)return;
+  var tag=(ev.target.tagName||'').toLowerCase();if(tag==='input'||tag==='textarea'||tag==='select')return;
+  if(ev.key==='Delete'||ev.key==='Backspace'){var n=noteGet();if(n){ev.preventDefault();noteDelete(n)}}
+});
+
 /* ---------- aggiunta elementi ---------- */
 document.addEventListener('click',function(ev){
   var b=ev.target.closest('[data-add]');if(!b)return;
@@ -5166,6 +5416,8 @@ function multiPanel(){
 }
 function renderInspector(){
   var box=$('#a-insp'),e=getEl();
+  if(sel)nsel=null;
+  var nn=noteGet();if(nn&&!e){box.innerHTML=notePanel(nn);return}
   if(sel===MULTI){box.innerHTML=multiPanel();return}
   if(!e){
     box.innerHTML='<h2>Elemento</h2><p class="empty">Tocca un elemento sulla scena o nell\'elenco per modificarne le proprietà: ottica e tipo di ripresa per le camere, calda o fredda per le luci, misure per gli oggetti.</p>';
@@ -6033,8 +6285,8 @@ function girScene(r){
   v=v||'Senza scena';return /^\d+$/.test(v)?'Scena '+('0'+v).slice(-Math.max(2,v.length)):(v==='Senza scena'?v:'Scena '+v);
 }
 /* righe da estrarre: con un nome file e segnate «Buona» (o «Riserva», se richiesto) */
-function girRows(){
-  var inc=$('#edGirRes').checked,E=edEnsure(),out=[],noEsito=0;
+function girRows(forceRes){
+  var inc=!!forceRes||$('#edGirRes').checked,E=edEnsure(),out=[],noEsito=0;
   E.rows.forEach(function(r,i){
     var nm=girNames(r.file);if(!nm.length)return;
     var es=[r.vbs,r.sbs],ok=es.indexOf('Buona')>=0||(inc&&es.indexOf('Riserva')>=0);
@@ -6176,6 +6428,106 @@ $('#edGirExtract').addEventListener('click',async function(){
   }catch(e){toast('Errore: '+(e&&e.message||'operazione non riuscita'))}
   finally{girBusy=false;girStop=false;$('#edGirStop').hidden=true;prog.hidden=true}
 });
+
+/* ---------- esporta su Cut: nuovo progetto di Cut con il girato «Buona» e «Riserva» in due cartelle ----------
+   Cut tiene i progetti in localStorage («cut.v1») e i file in IndexedDB («cut-media»): se Ciak e Cut stanno
+   nello stesso sito/browser basta scriverci dentro, e il progetto compare nella pagina iniziale di Cut. */
+var CUT_URL='';   /* indirizzo di Cut (per esempio 'cut.html'): se lo scrivi, il messaggio finale propone «Apri Cut» */
+var CUT_MIME={mp4:'video/mp4',m4v:'video/mp4',mov:'video/quicktime',webm:'video/webm',mkv:'video/x-matroska',avi:'video/x-msvideo',mts:'video/mp2t',m2ts:'video/mp2t',ogv:'video/ogg','3gp':'video/3gpp',
+  wav:'audio/wav',mp3:'audio/mpeg',m4a:'audio/mp4',aac:'audio/aac',flac:'audio/flac',ogg:'audio/ogg',oga:'audio/ogg',opus:'audio/ogg',aif:'audio/aiff',aiff:'audio/aiff',
+  jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',bmp:'image/bmp',avif:'image/avif'};
+function cutMime(f){if(/^(video|audio|image)\//.test(f.type))return f.type;return CUT_MIME[(f.name.split('.').pop()||'').toLowerCase()]||''}
+function cutUid(){return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3)}
+function cutDb(){return new Promise(function(res,rej){var r=indexedDB.open('cut-media',1);r.onupgradeneeded=function(){r.result.createObjectStore('m')};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
+function cutPut(db,k,v){return new Promise(function(res,rej){var t=db.transaction('m','readwrite');t.objectStore('m').put(v,k);t.oncomplete=function(){res()};t.onerror=t.onabort=function(){rej(t.error)}})}
+function cutDel(db,k){return new Promise(function(res){try{var t=db.transaction('m','readwrite');t.objectStore('m').delete(k);t.oncomplete=t.onerror=t.onabort=function(){res()}}catch(e){res()}})}
+function cutThumb(src,w,h){
+  var c=document.createElement('canvas');c.width=192;c.height=108;var x=c.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,192,108);
+  var k=Math.max(192/w,108/h);x.drawImage(src,(192-w*k)/2,(108-h*k)/2,w*k,h*k);
+  try{return c.toDataURL('image/jpeg',.6)}catch(e){return null}
+}
+/* durata, dimensioni e miniatura, come fa Cut quando importa un file */
+function cutProbe(file,url){
+  return new Promise(function(res){
+    var kind=file.type.indexOf('video')===0?'video':file.type.indexOf('audio')===0?'audio':file.type.indexOf('image')===0?'image':null;
+    if(!kind)return res(null);
+    var v=null,to=setTimeout(function(){done(null)},20000);
+    function done(r){clearTimeout(to);if(v){try{v.onloadedmetadata=v.onseeked=v.onerror=null;v.removeAttribute('src');v.load()}catch(e){}}res(r)}
+    if(kind==='image'){var i=new Image();i.onload=function(){done({kind:kind,w:i.naturalWidth,h:i.naturalHeight,dur:5,thumb:cutThumb(i,i.naturalWidth,i.naturalHeight)})};i.onerror=function(){done(null)};i.src=url;return}
+    v=document.createElement(kind==='video'?'video':'audio');v.preload='auto';v.muted=true;v.src=url;
+    var fixing=false;
+    v.onloadedmetadata=function(){
+      if(v.duration===Infinity){fixing=true;v.currentTime=1e101;return}
+      if(kind==='audio')return done({kind:kind,dur:v.duration});
+      v.currentTime=Math.min(0.5,v.duration/2);
+    };
+    v.onseeked=function(){
+      if(fixing){fixing=false;v.currentTime=0.1;return}
+      if(kind==='audio')return;
+      done({kind:kind,w:v.videoWidth,h:v.videoHeight,dur:v.duration,thumb:cutThumb(v,v.videoWidth,v.videoHeight)});
+    };
+    v.onerror=function(){done(null)};
+  });
+}
+function cutRatio(w,h){var R={'16:9':16/9,'9:16':9/16,'1:1':1,'4:5':.8,'21:9':21/9},q=w/h,best='16:9',d=1e9;for(var k in R){var x=Math.abs(Math.log(q/R[k]));if(x<d){d=x;best=k}}return best}
+function cutDims(ratio,short){var p=ratio.split(':'),rw=+p[0],rh=+p[1];return rw>=rh?[Math.round(short*rw/rh/2)*2,short]:[short,Math.round(short*rh/rw/2)*2]}
+$('#edGirCut').addEventListener('click',async function(){
+  if(girBusy)return;var sel=girRows(true);
+  if(!sel.length){$('#edGirOut').innerHTML='<p class="empty">Nessuna riga da esportare: scrivi il nome del file nella colonna «File» e segna la ripresa come «Buona» o «Riserva».</p>';return}
+  girBusy=true;girStop=false;girIdx=null;
+  var prog=$('#edGirProg'),db=null,mediaIds=[],stored=false;
+  try{
+    var idx=await girEnsureIndex();if(!idx)return;
+    var res=await girMatch(idx,sel),ok=res.filter(function(x){return x.found.length});
+    if(!ok.length){girReport(res,sel);toast('Nessun file trovato nella cartella');return}
+    var total=ok.reduce(function(a,x){return a+x.size},0);
+    if(total>1e9&&!confirm('Cut tiene i file dentro il browser: verranno copiati circa '+girFmt(total)+'. Continuare?'))return;
+    db=await cutDb();
+    ok.sort(function(a,b){return (a.sel.esito==='Buona'?0:1)-(b.sel.esito==='Buona'?0:1)});   /* se un file è in due righe vince «Buona» */
+    $('#edGirStop').hidden=false;prog.hidden=false;
+    var split=$('#edGirScn').checked,folders=[],media=[],seen={},added={Buona:0,Riserva:0},bad=[],skipped=[],fmt=null,fatal=null,n=0,nAll=ok.reduce(function(a,x){return a+x.found.length},0);
+    function fol(name,parent){var f=folders.filter(function(q){return q.name===name&&(q.parent||null)===(parent||null)})[0];if(!f){f={id:cutUid(),name:name,parent:parent||null};folders.push(f)}return f.id}
+    outer:for(var x of ok){
+      for(var o of x.found){
+        if(girStop)break outer;
+        n++;if(seen[o.path])continue;seen[o.path]=1;
+        prog.innerHTML='<b>'+Math.round(n/Math.max(1,nAll)*100)+'%</b> · '+n+' di '+nAll+' · '+esc(o.name);
+        var f=await o.h.getFile(),mt=cutMime(f);
+        if(!mt){skipped.push(o.name);continue}
+        var blob=(mt===f.type)?f:new File([f],f.name,{type:mt,lastModified:f.lastModified}),url=URL.createObjectURL(blob),info=null;
+        try{info=await cutProbe(blob,url)}finally{URL.revokeObjectURL(url)}
+        if(!info||!isFinite(info.dur)||info.dur<=0){bad.push(o.name);continue}
+        var id=cutUid();
+        try{await cutPut(db,id,blob);mediaIds.push(id)}catch(e){fatal=e;bad.push(o.name);break outer}
+        var m={id:id,name:o.name.replace(/\.[^.]+$/,''),kind:info.kind,dur:info.dur,w:info.w||0,h:info.h||0,thumb:info.thumb||null},
+            top=fol(x.sel.esito==='Buona'?'Buono':'Riserva',null);
+        m.folder=split?fol(x.sel.scene,top):top;
+        media.push(m);added[x.sel.esito]++;
+        if(!fmt&&info.kind==='video'&&info.w&&info.h)fmt=[info.w,info.h];
+      }
+    }
+    prog.hidden=true;
+    if(!media.length){girReport(res,sel);toast(fatal?'Spazio del browser esaurito':'Nessun file leggibile da Cut');return}
+    var title=(S.ed&&S.ed.head&&S.ed.head.film)||S.title||'progetto',
+        ratio=fmt?cutRatio(fmt[0],fmt[1]):'16:9',short=(fmt&&Math.min(fmt[0],fmt[1])>=1080)?1080:720,d=cutDims(ratio,short),now=Date.now(),
+        P={id:cutUid(),name:'Girato - '+title,folder:null,ratio:ratio,w:d[0],h:d[1],fps:25,created:now,modified:now,media:media,mfolders:folders,clips:[],groups:{},
+           tracks:{T1:{hide:false,mute:false},V2:{hide:false,mute:false},V1:{hide:false,mute:false},A1:{hide:false,mute:false}},fromCiak:true},
+        raw=localStorage.getItem('cut.v1'),DBc={projects:[],folders:[]};
+    if(raw){try{DBc=JSON.parse(raw)}catch(e){throw new Error('i dati di Cut in questo browser non sono leggibili')}}
+    if(!DBc||typeof DBc!=='object')DBc={projects:[],folders:[]};
+    DBc.projects=DBc.projects||[];DBc.folders=DBc.folders||[];DBc.projects.push(P);
+    try{localStorage.setItem('cut.v1',JSON.stringify(DBc))}catch(e){for(var k of mediaIds)await cutDel(db,k);throw new Error('spazio del browser esaurito: il progetto non è stato creato')}
+    stored=true;
+    var notes=(bad.length?' · <span class="gbad">'+bad.length+' non '+(bad.length===1?'è leggibile':'sono leggibili')+' dal browser</span>':'')+(skipped.length?' · '+skipped.length+' non multimedial'+(skipped.length===1?'e':'i')+' ignorat'+(skipped.length===1?'o':'i'):'');
+    girReport(res,sel,'<p class="gsum">'+(girStop?'Interrotto · ':'Fatto · ')+'<b>'+media.length+'</b> file nel nuovo progetto «'+esc(P.name)+'» di Cut: '+added.Buona+' in «Buono», '+added.Riserva+' in «Riserva»'+notes+'. Lo trovi nella pagina iniziale di Cut'+(CUT_URL?' · <a href="'+esc(CUT_URL)+'" target="_blank" rel="noopener">Apri Cut</a>':'')+(fatal?'. <span class="gbad">Spazio del browser esaurito: gli ultimi file non sono entrati.</span>':'')+'</p>');
+    toast(girStop?'Esportazione interrotta':'Esportato su Cut: '+media.length+' file');
+  }catch(e){
+    if(db&&!stored)for(var k2 of mediaIds)await cutDel(db,k2);
+    toast('Errore: '+(e&&e.message||'operazione non riuscita'))
+  }
+  finally{girBusy=false;girStop=false;$('#edGirStop').hidden=true;prog.hidden=true}
+});
+
 
 
 /* ---------- suggerimenti nella colonna «File»: come i nomi nella sceneggiatura, il completamento compare in grigio; Invio (o freccia destra) lo accetta ----------
@@ -6578,7 +6930,7 @@ function updateLightsBtn(){
   b.classList.toggle('lights-off',!!ls.length&&!on);
 }
 var curJson=null; /* JSON della pianta corrente, calcolato una sola volta per ridisegno (serve alle chiavi di anteprima e striscia) */
-function refreshLive(){curJson=JSON.stringify(cur());try{updateLightsBtn();renderStage();renderPreview();renderStrip();renderChips();if(view==='seq')renderTimeline();updateSimUI()}finally{curJson=null}}
+function refreshLive(){curJson=JSON.stringify(cur());try{updateLightsBtn();renderStage();renderNoteBar();renderPreview();renderStrip();renderChips();if(view==='seq')renderTimeline();updateSimUI()}finally{curJson=null}}
 function refreshAll(){simReset();renderPreviewHead();renderLayers();refreshLive();renderInspector();if(view==='seq')renderSeqHead();else renderInfo();if(!$('#viewBoard').hidden)renderBoard();if(!$('#viewShot').hidden)renderShot();if(!$('#viewEd').hidden)renderEd()}
 
 /* ---------- progetti salvati in locale ---------- */
