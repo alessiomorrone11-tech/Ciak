@@ -12652,7 +12652,7 @@ if(typeof module!=='undefined')module.exports=Core;
 'use strict';
 /* Per non far incollare la configurazione a ogni collega: incolla qui la tua firebaseConfig come oggetto, es. {apiKey:"…",authDomain:"…",projectId:"…",appId:"…"} */
 var BUILTIN_CFG={apiKey:"AIzaSyCcIsItn-awOJc6SrPIDmD_XmUhZnpyZCw",authDomain:"ciak-e318b.firebaseapp.com",projectId:"ciak-e318b",storageBucket:"ciak-e318b.firebasestorage.app",messagingSenderId:"686854012147",appId:"1:686854012147:web:ce10dd2d0bc54e39970b86"};
-var ROLES=[['regista','Regista','Regista'],['coregista','Co-regista','Co-regista'],['aiuto','Aiuto regia','Aiuto regia'],['operatore','Operatore di macchina','Operatrice di macchina'],['dop','DOP','DOP'],['sceneggiatore','Sceneggiatore','Sceneggiatrice'],['produttore','Produttore','Produttrice'],['altro','Altro sul set','Altro sul set']];
+var ROLES=[['regista','Regista','Regista'],['coregista','Co-regista','Co-regista'],['aiuto','Aiuto regia','Aiuto regia'],['operatore','Operatore di macchina','Operatrice di macchina'],['dop','DOP','DOP'],['sceneggiatore','Sceneggiatore','Sceneggiatrice'],['produttore','Produttore','Produttrice'],['storyboard','Storyboard','Storyboard'],['altro','Altro sul set','Altro sul set']];
 var RULES="rules_version = '2';\nservice cloud.firestore {\n  match /databases/{db}/documents {\n    match /teams/{code} {\n      allow get: if request.auth != null;\n      allow list: if false;\n      allow create, update: if request.auth != null;\n      match /items/{i} {\n        allow read, write: if request.auth != null;\n      }\n    }\n    match /productions/{code} {\n      allow get: if request.auth != null;\n      allow list: if false;\n      allow create, update: if request.auth != null;\n      match /chat/{m} {\n        allow read, create: if request.auth != null;\n        allow delete: if request.auth != null && resource.data.by == request.auth.uid;\n      }\n      match /files/{f} {\n        allow read, create: if request.auth != null;\n        allow delete: if request.auth != null && resource.data.by == request.auth.uid;\n      }\n    }\n    match /users/{u}/stickers/{s} {\n      allow read, write: if request.auth != null && request.auth.uid == u;\n    }\n    match /users/{u}/prods/{p} {\n      allow read, write: if request.auth != null && request.auth.uid == u;\n    }\n    match /users/{u}/projects/{p} {\n      allow read, write: if request.auth != null && request.auth.uid == u;\n      match /items/{i} {\n        allow read, write: if request.auth != null && request.auth.uid == u;\n      }\n    }\n  }\n}";
 var FRESH=200000;          /* una presenza più vecchia di così (nessun battito) non blocca più nulla */
 var HB_ON=75000,HB_OFF=240000,IDLE=180000;
@@ -12669,7 +12669,7 @@ var db=null,uid=null,fb=null,ready=null,applying=false,sel=null,revealed=false,p
 var unsubs={},teams={},timers={},syncAt={},syncErr={},drafts={},beat=null,R={},pend={},byWho={},atKey={},applyT={},upgrading={},lastRev={},lastW={},presT={},lockSig={},needResync={},tick=null;
 var dragAt=0,composing=false,act=Date.now();
 var $=function(s){return document.querySelector(s)};
-function roleLabel(r,g,alt){if(r==='altro'){var a=String(alt==null?'':alt).replace(/\s+/g,' ').trim().slice(0,30);if(a)return a}var x=ROLES.filter(function(a){return a[0]===r})[0]||ROLES[7];return g==='F'?x[2]:x[1]}
+function roleLabel(r,g,alt){if(r==='altro'){var a=String(alt==null?'':alt).replace(/\s+/g,' ').trim().slice(0,30);if(a)return a}var x=ROLES.filter(function(a){return a[0]===r})[0]||ROLES[ROLES.length-1];return g==='F'?x[2]:x[1]}
 function myAlt(){return me.role==='altro'?String(me.alt||'').slice(0,30):''}
 function h(t,a,k){var e=document.createElement(t),i;a=a||{};for(i in a){if(i==='text')e.textContent=a[i];else if(i.slice(0,2)==='on')e[i]=a[i];else e.setAttribute(i,a[i])}(k||[]).forEach(function(c){if(c)e.appendChild(c)});return e}
 var toastT=null;
@@ -13305,11 +13305,12 @@ function aSignOut(){
 var prods={},pdUn=null,pdL={},pdJ=jget('ciak-prod-joined',{}),pdD={name:'',code:'',pick:{},open:{}},pdQ=Promise.resolve(),pdBusy={},pdSkip={},pdW={},pdErrT='',pdT=null,pdRules=false;
 function pdRef(c){return db.collection('productions').doc(c)}
 function pdMine(){return db.collection('users').doc(uid).collection('prods')}
-function pdMe(c){var r=prRoleOf(c);return {name:me.name||acct.u||'Senza nome',role:r.role,g:me.g,alt:r.alt,av:me.av||'',u:acct.u||'',ts:Date.now()}}
+function pdMe(c){var r=prRoleOf(c);return {name:me.name||acct.u||'Senza nome',role:r.role,g:me.g,alt:r.alt,av:me.av||'',u:acct.u||'',ts:Date.now(),j:(((prods[c]||{}).members||{})[uid]||{}).j||Date.now()}}
 function pdName(){if(!me.name&&acct.u){me.name=acct.u;jset('ciak-team-me',me)}}
 /* ruoli per produzione: ognuna ha il suo ruolo (me.pr[codice]); dove non ne scelgo uno vale quello predefinito (me.role).
-   In una produzione un ruolo può averlo una sola persona («Altro sul set» resta sempre libero) */
-var RFREE='altro';
+   In una produzione solo regista, DOP e produttore possono averli una sola persona; tutti gli altri ruoli possono averli più persone (in elenco compare un numero: 1, 2, 3…) */
+var RFREE='altro',EXCL={regista:1,dop:1,produttore:1};
+function roleNum(M,u){var m=M&&M[u];if(!m||!m.role||m.role===RFREE||EXCL[m.role])return '';var l=Object.keys(M).filter(function(x){return M[x]&&M[x].role===m.role}).sort(function(a,b){return ((M[a].j||0)-(M[b].j||0))||(a<b?-1:1)});return l.length>1?' '+(l.indexOf(u)+1):''}
 function prRoleOf(c){var o=(me.pr||{})[c];if(o&&o.role)return {role:o.role,alt:o.role===RFREE?String(o.alt||'').slice(0,30):''};return {role:me.role,alt:myAlt()}}
 function pdSetRole(c,role,alt){me.pr=me.pr||{};me.pr[c]={role:role,alt:role===RFREE?String(alt||'').replace(/\s+/g,' ').trim().slice(0,30):''};jset('ciak-team-me',me)}
 /* ruolo con cui lavoro su un progetto condiviso (codice team): quello della produzione che lo contiene; se è in più produzioni vale il più permissivo */
@@ -13321,13 +13322,13 @@ function roleOfCode(tc){
 function roleFreeFor(tc){return roleOfCode(tc).role===RFREE}
 function pdTaken(c){
   var t={},d=prods[c];if(!d||d.gone||d.closed)return t;var M=d.members||{};
-  Object.keys(M).forEach(function(u){var m=M[u];if(u===uid||!m||!m.role||m.role===RFREE)return;if(!t[m.role])t[m.role]=m.name||'un collega'});
+  Object.keys(M).forEach(function(u){var m=M[u];if(u===uid||!m||!m.role||!EXCL[m.role])return;if(!t[m.role])t[m.role]=m.name||'un collega'});
   return t;
 }
 /* se il mio ruolo in questa produzione è già di un altro (es. entro con il ruolo predefinito già occupato) passo al primo ruolo libero; a parità di ruolo cede chi è entrato dopo */
 function pdRoleFix(c){
   var d=prods[c];if(!d||d.gone||d.closed)return;
-  var r=prRoleOf(c);if(!r.role||r.role===RFREE)return;
+  var r=prRoleOf(c);if(!r.role||!EXCL[r.role])return;
   var M=d.members||{},mine=!!(M[uid]&&M[uid].role===r.role),lose=false,by='';
   Object.keys(M).forEach(function(u){if(u===uid||!M[u]||M[u].role!==r.role)return;if(!mine||u<uid){lose=true;by=M[u].name||'un collega'}});
   if(!lose)return;
@@ -13428,10 +13429,10 @@ function pdOpen(part,key){
     setTimeout(function(){var e=$(part==='sw'?'#swProjects [data-o="'+id+'"]':part==='pr'?'#edHubList [data-edo="'+id+'"]':'#projects [data-popen="'+id+'"]');if(e)e.click();else toast('Il progetto non è ancora disponibile: riprova tra un attimo')},90);
   },90);
 }
-function pdChip(u,m){
+function pdChip(u,m,M){
   var on=Date.now()-(m.ts||0)<300000||u===uid,au=avUrl(m.av);
   var i=au?h('i',{style:'background-image:url("'+au+'")'}):h('i',{text:initials(m.name),style:'background:'+colorOf(u)});
-  return h('span',{'class':'mem'+(on?' on':''),title:on?'Attivo ora':'Ultima attività '+new Date(m.ts||0).toLocaleString('it-IT')},[i,document.createTextNode(m.name+' · '+roleLabel(m.role,m.g,m.alt)+(u===uid?' (tu)':''))]);
+  return h('span',{'class':'mem'+(on?' on':''),title:on?'Attivo ora':'Ultima attività '+new Date(m.ts||0).toLocaleString('it-IT')},[i,document.createTextNode(m.name+' · '+roleLabel(m.role,m.g,m.alt)+roleNum(M,u)+(u===uid?' (tu)':''))]);
 }
 function pdProj(c,d,tc,e){
   var k=keyOf(tc),T=teams[tc]||{},pk=null,btns=[];
@@ -13463,7 +13464,7 @@ function pdCard(c){
   if(!op)return h('div',{'class':'pdp'},kids);
   var tcs=Object.keys(P).sort(function(a,b){return (P[b].ts||0)-(P[a].ts||0)}),us=Object.keys(M).sort(function(a,b){return (M[b].ts||0)-(M[a].ts||0)});
   kids.push(h('div',{'class':'row'},[h('span',{'class':'code',text:c}),h('button',{'class':'tb sm',type:'button',text:'Copia codice',onclick:function(){copy(c,'Codice copiato')}}),lk?h('button',{'class':'tb sm',type:'button',text:'Copia link d’invito',onclick:function(){copy(lk,'Link copiato')}}):null]));
-  kids.push(h('div',{},us.map(function(u){return pdChip(u,M[u])})));
+  kids.push(h('div',{},us.map(function(u){return pdChip(u,M[u],M)})));
   var rr=prRoleOf(c);
   pdRoleNodes(c).forEach(function(n){kids.push(n)});
   kids.push(h('h5',{'class':'pdh',text:'Progetti condivisi ('+tcs.length+')'}));
@@ -13661,7 +13662,7 @@ function pdPaneMembers(c,d){
   us.forEach(function(u){
     var m=M[u]||{},on=Date.now()-(m.ts||0)<300000||u===uid;
     out.push(h('div',{'class':'pdm'},[pdAvI(u,m),
-      h('div',{'class':'pdmt'},[h('b',{text:(m.name||'Senza nome')+(u===uid?' (tu)':'')}),h('span',{text:roleLabel(m.role,m.g,m.alt)+(d.owner===u?' · proprietario':'')})]),
+      h('div',{'class':'pdmt'},[h('b',{text:(m.name||'Senza nome')+(u===uid?' (tu)':'')}),h('span',{text:roleLabel(m.role,m.g,m.alt)+roleNum(M,u)+(d.owner===u?' · proprietario':'')})]),
       h('span',{'class':'pdon'+(on?' on':''),title:on?'Attivo ora':'Ultima attività '+new Date(m.ts||0).toLocaleString('it-IT'),text:on?'● online':'○ offline'})]));
   });
   pdRoleNodes(c).forEach(function(n){if(n)out.push(n)});
@@ -13764,9 +13765,9 @@ function pdChatPaint(){
   if(RM.tab==='ch')pdSeen();
 }
 function pdMsgWho(row){
-  var M=(prods[RM.c]||{}).members||{},mm=M[row._by],name=(mm&&mm.name)||row._n||'Utente',au=mm?avUrl(mm.av):'',sig=name+'|'+au.length+'|'+(mm?mm.role+(mm.alt||''):'');
+  var M=(prods[RM.c]||{}).members||{},mm=M[row._by],name=(mm&&mm.name)||row._n||'Utente',au=mm?avUrl(mm.av):'',sig=name+'|'+au.length+'|'+(mm?mm.role+(mm.alt||'')+roleNum(M,row._by):'');
   if(row._sig===sig)return;row._sig=sig;
-  row._nm.textContent=name+(mm?' · '+roleLabel(mm.role,mm.g,mm.alt):'');
+  row._nm.textContent=name+(mm?' · '+roleLabel(mm.role,mm.g,mm.alt)+roleNum(M,row._by):'');
   if(au){row._av.style.cssText='background-image:url("'+au+'")';row._av.textContent=''}
   else{row._av.style.cssText='background:'+colorOf(row._by);row._av.textContent=initials(name)}
 }
@@ -14184,9 +14185,9 @@ function setupView(b){
     h('button',{'class':'tb p',type:'button',text:'Salva configurazione',onclick:function(){var c=parseCfg($('#tmCfg').value);if(!c){err(new Error('Configurazione non riconosciuta: servono almeno apiKey, projectId e appId'));return}cfg=c;jset('ciak-team-config',c);start()}}),
     h('div',{id:'tmErr','class':'msg'})]));
 }
-function memberChip(u,m){
+function memberChip(u,m,M){
   var on=Date.now()-(m.ts||0)<300000||u===uid;
-  var au=avUrl(m.av),kids=[au?h('i',{'class':'av',style:'background-image:url("'+au+'")'}):h('i',{text:initials(m.name),style:'background:'+colorOf(u)}),document.createTextNode(m.name+' · '+roleLabel(m.role,m.g,m.alt)+(u===uid?' (tu)':''))];
+  var au=avUrl(m.av),kids=[au?h('i',{'class':'av',style:'background-image:url("'+au+'")'}):h('i',{text:initials(m.name),style:'background:'+colorOf(u)}),document.createTextNode(m.name+' · '+roleLabel(m.role,m.g,m.alt)+roleNum(M,u)+(u===uid?' (tu)':''))];
   if(on&&m.at&&m.at.label&&fresh(m))kids.push(h('small',{text:'· '+m.at.label}));
   return h('span',{'class':'mem'+(on?' on':''),title:on?'Attivo ora':'Ultima attività '+new Date(m.ts||0).toLocaleString('it-IT')},kids);
 }
@@ -14239,7 +14240,7 @@ function render(){
       h('div',{'class':'st',text:L.kind==='sw'?(hasPair?'Include sceneggiatura, storyboard e Produzione (bollettino d\'edizione)':'Include la sceneggiatura'):'Include inquadrature e Produzione (bollettino d\'edizione)'}),
       h('div',{'class':'st'+(syncErr[L.code]?' bad':''),text:statusTxt(L.code)+(byWho[L.code]&&!syncErr[L.code]?' · ultima modifica: '+byWho[L.code]:'')}),
       mine?h('div',{'class':'here',text:'Stai lavorando su: '+mine.label}):null,
-      h('div',{},uids.map(function(u){return memberChip(u,mem[u])})),
+      h('div',{},uids.map(function(u){return memberChip(u,mem[u],mem)})),
       d.owner===uid?h('button',{'class':'tb',type:'button',text:'Chiudi il progetto per tutti',style:'margin-top:8px;display:block',onclick:function(){closeProject(k)}}):null,
       h('button',{'class':'tb',type:'button',text:'Smetti di sincronizzare',style:'margin-top:8px',onclick:function(){leave(k)}})]);
     b.appendChild(card);
