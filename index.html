@@ -8039,7 +8039,8 @@ function imBindFetch(C){var k=imKey(C);if(imCache[k])imShow(imCache[k])}
 var IM_API_DEFAULT='https://ciak-search.alessiomorrone11.workers.dev';   /* server di ricerca predefinito; un indirizzo diverso scritto in «Fonti» ha la precedenza */
 function imApiBase(){var v='';try{v=localStorage.getItem('ciak-im-api')||''}catch(e){}v=(v||IM_API_DEFAULT).trim();if(v&&!/^https?:\/\//i.test(v))v='https://'+v;return v.replace(/\/+$/,'')}
 function imApi(path,params){var b=imApiBase();return fetch(b+path+'?'+new URLSearchParams(params),{signal:imAb&&imAb.signal}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j&&j.error||('errore '+r.status));return j})})}
-function imKeyYt(){try{return localStorage.getItem('ciak-im-yt')||''}catch(e){return ''}}
+var IM_YT_DEFAULT='AIzaSyAGQmwQHI-A-RqTUIrXtpQmP748gynVBFE';   /* chiave YouTube Data API v3 predefinita; una chiave diversa scritta in «Fonti» ha la precedenza */
+function imKeyYt(){var v='';try{v=localStorage.getItem('ciak-im-yt')||''}catch(e){}return (v||IM_YT_DEFAULT).trim()}
 function imWiki(lang,q){
   var u='https://'+lang+'.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent(q)+'&gsrlimit=4&prop=extracts%7Cinfo&exintro=1&explaintext=1&exchars=320&inprop=url&format=json&origin=*';
   return fetch(u,{signal:imAb&&imAb.signal}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){var p=j&&j.query&&j.query.pages;return p?Object.keys(p).map(function(k){return p[k]}).sort(function(a,b){return a.index-b.index}):[]});
